@@ -153,7 +153,7 @@ if st.session_state.pdf_text:
                 st.markdown(st.session_state.summary)
             if st.button("Regenerate Summary"):
                 st.session_state.summary = None
-                st.experimental_rerun()
+                st.rerun()
         else:
             st.info("Click 'Generate Summary' to create a comprehensive summary of your PDF.")
 
@@ -170,7 +170,7 @@ if st.session_state.pdf_text:
         if st.button("Regenerate MCQs", key="regenerate_mcqs"):
             st.session_state.mcqs = None
             st.session_state.mcq_answers = None
-            st.experimental_rerun()
+            st.rerun()
         
         # Generate MCQs button
         if st.button("Generate MCQs", type="primary", key="generate_mcqs"):
