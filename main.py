@@ -160,41 +160,61 @@ if st.session_state.pdf_text:
     elif option == "Generate MCQs":
         num_qs = st.selectbox("Select number of questions", [5, 10, 20], key="num_qs")
         
+        # Initialize session state
         if 'mcqs' not in st.session_state:
             st.session_state.mcqs = None
+        if 'mcq_answers' not in st.session_state:
             st.session_state.mcq_answers = None
         
-        if st.button("Generate MCQs", type="primary"):
+        # Handle regenerate button
+        if st.button("Regenerate MCQs", key="regenerate_mcqs"):
+            st.session_state.mcqs = None
+            st.session_state.mcq_answers = None
+            st.experimental_rerun()
+        
+        # Generate MCQs button
+        if st.button("Generate MCQs", type="primary", key="generate_mcqs"):
             with st.spinner("Generating MCQs..."):
                 try:
                     st.session_state.mcqs = ai.generate_mcqs(st.session_state.pdf_text, num_qs)
-                    st.session_state.mcq_answers = [None] * len(st.session_state.mcqs)
+                    if st.session_state.mcqs:
+                        st.session_state.mcq_answers = [None] * len(st.session_state.mcqs)
+                    else:
+                        st.error("❌ No MCQs were generated. Please try again.")
                 except Exception as e:
                     st.error(f"❌ MCQ generation failed: {e}")
-                    st.stop()
-        
-        if st.session_state.mcqs:
-            with st.expander("📝 Multiple Choice Questions", expanded=True):
-                for i, q in enumerate(st.session_state.mcqs):
-                    st.markdown(f"**Q{i+1}. {q['question']}**")
-                    selected = st.radio(
-                        "Choose answer",
-                        q['options'],
-                        key=f"mcq_{i}",
-                        index=q['options'].index(st.session_state.mcq_answers[i]) if st.session_state.mcq_answers[i] in q['options'] else None
-                    )
-                    if selected != st.session_state.mcq_answers[i]:
-                        st.session_state.mcq_answers[i] = selected
-                    if selected:
-                        if selected == q['answer']:
-                            st.success(f"✅ Correct! The answer is: {q['answer']}")
-                        else:
-                            st.error(f"❌ Wrong! The correct answer is: {q['answer']}")
-                if st.button("Regenerate MCQs"):
                     st.session_state.mcqs = None
                     st.session_state.mcq_answers = None
-                    st.experimental_rerun()
-        elif not st.session_state.mcqs and not st.button("Generate MCQs", type="primary"):
+        
+        # Display MCQs if available
+        if st.session_state.mcqs and len(st.session_state.mcqs) > 0:
+            with st.expander("📝 Multiple Choice Questions", expanded=True):
+                for i, q in enumerate(st.session_state.mcqs):
+                    if isinstance(q, dict) and 'question' in q and 'options' in q and 'answer' in q:
+                        st.markdown(f"**Q{i+1}. {q['question']}**")
+                        
+                        # Ensure mcq_answers has the right length
+                        while len(st.session_state.mcq_answers) <= i:
+                            st.session_state.mcq_answers.append(None)
+                        
+                        selected = st.radio(
+                            "Choose answer",
+                            q['options'],
+                            key=f"mcq_{i}",
+                            index=q['options'].index(st.session_state.mcq_answers[i]) if st.session_state.mcq_answers[i] in q['options'] else None
+                        )
+                        
+                        if selected != st.session_state.mcq_answers[i]:
+                            st.session_state.mcq_answers[i] = selected
+                        
+                        if selected:
+                            if selected == q['answer']:
+                                st.success(f"✅ Correct! The answer is: {q['answer']}")
+                            else:
+                                st.error(f"❌ Wrong! The correct answer is: {q['answer']}")
+                    else:
+                        st.error(f"❌ Invalid question format for Q{i+1}")
+        elif not st.session_state.mcqs:
             st.info("Click 'Generate MCQs' to create multiple choice questions based on your PDF.")
 
     elif option == "Ask Questions (QA)":

@@ -125,18 +125,22 @@ class HybridAI:
         
         prompt = f"""
         Please provide a comprehensive, well-structured summary of the following text. 
+        Focus on the MAIN CONTENT, KEY TOPICS, and IMPORTANT CONCEPTS rather than author information or preface.
+        
         Organize the summary into clear sections with headers like:
         
-        ## Overview
-        ## Key Points  
-        ## Main Features
-        ## Important Details
-        ## Conclusions
+        ## Main Topics Covered
+        ## Key Concepts and Definitions
+        ## Important Details and Examples
+        ## Key Takeaways
+        ## Summary
+        
+        IMPORTANT: Skip author information, preface, acknowledgments, and focus on the actual educational/content material.
         
         Text to summarize:
         {text}
         
-        Please ensure the summary is detailed, accurate, and maintains the key information from the original text.
+        Please ensure the summary is detailed, accurate, and focuses on the educational content and key information from the original text.
         """
         
         if progress_callback:
@@ -163,8 +167,16 @@ class HybridAI:
         
         prompt = f"""
         Generate {num_questions} multiple choice questions based on the following text. 
+        
+        IMPORTANT REQUIREMENTS:
+        1. Focus on MAIN CONTENT, KEY CONCEPTS, and IMPORTANT TOPICS
+        2. AVOID questions about author, preface, acknowledgments, or publication details
+        3. Create questions that test understanding of the actual educational material
+        4. Distribute questions across different sections of the content (beginning, middle, end)
+        5. Include questions about definitions, concepts, processes, and key facts
+        
         For each question, provide:
-        1. A clear, specific question
+        1. A clear, specific question about the content
         2. Four answer options (A, B, C, D)
         3. The correct answer
         
@@ -180,7 +192,7 @@ class HybridAI:
         Text to base questions on:
         {text}
         
-        Make sure the questions test understanding of key concepts and important details from the text.
+        Make sure the questions test understanding of key concepts and important details from the text content, not metadata.
         """
         
         try:
