@@ -15,10 +15,13 @@ try:
     # Validate configuration first
     Config.validate_config()
     ai = HybridAI()
+    ai_available = True
 except Exception as e:
-    st.error(f"Failed to initialize AI: {e}")
-    st.error("Please ensure both PERPLEXITY_API_KEY_1 and PERPLEXITY_API_KEY_2 are set in your .env file")
-    st.stop()
+    st.error(f"⚠️ AI Configuration Error: {e}")
+    st.error("Please ensure your API keys are configured in Streamlit Cloud secrets.")
+    st.info("Go to your app settings → Secrets and add your environment variables.")
+    ai_available = False
+    ai = None
 
 # --- Sidebar ---
 st.set_page_config(layout="wide", page_title="PDF Assistant", page_icon="📄")
@@ -33,7 +36,7 @@ st.sidebar.markdown("""
 st.sidebar.info("Developed using Streamlit and AI.")
 
 # Show API usage stats in sidebar
-if st.sidebar.checkbox("Show API Usage Stats"):
+if ai_available and st.sidebar.checkbox("Show API Usage Stats"):
     try:
         stats = ai.get_usage_stats()
         st.sidebar.subheader("API Usage Statistics")
@@ -45,6 +48,8 @@ if st.sidebar.checkbox("Show API Usage Stats"):
             )
     except Exception as e:
         st.sidebar.error(f"Could not load stats: {e}")
+elif not ai_available:
+    st.sidebar.warning("⚠️ AI features unavailable - configure API keys first")
 
 # --- Main Title ---
 st.title("PDF Assistant")
@@ -118,6 +123,12 @@ if st.session_state.uploaded_filename and st.session_state.public_url:
 # Only show options if a file is uploaded and text is extracted
 if st.session_state.pdf_text:
     st.header("2. Choose an action")
+    
+    if not ai_available:
+        st.error("❌ AI features are not available. Please configure your API keys in Streamlit Cloud secrets.")
+        st.info("Go to your app settings → Secrets and add your environment variables.")
+        st.stop()
+    
     option = st.selectbox("What would you like to do?", ["Summarize", "Generate MCQs", "Ask Questions (QA)"])
 
     if option == "Summarize":
