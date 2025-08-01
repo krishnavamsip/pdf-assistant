@@ -54,7 +54,7 @@ elif not ai_available:
 # --- Main Title ---
 st.title("PDF Assistant")
 st.markdown(
-    "<style>div.block-container{padding-top:2rem;} .stButton>button{background:#4F8BF9;color:white;} .stFileUploader{border:2px solid #4F8BF9;border-radius:8px;} .stSuccess{background:#e6f7ff;} .stError{background:#fff1f0;} .stRadio>div{gap:1rem;}</style>",
+    "<style>div.block-container{padding-top:2rem;} .stButton>button{background:#4F8BF9;color:white;} .stFileUploader{border:2px solid #4F8BF9;border-radius:8px;} .stRadio>div{gap:1rem;}</style>",
     unsafe_allow_html=True
 )
 
