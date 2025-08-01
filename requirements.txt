@@ -1,0 +1,9 @@
+streamlit
+pdfplumber
+supabase
+python-dotenv
+transformers
+torch
+requests
+openai
+typing-extensions

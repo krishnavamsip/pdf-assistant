@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: pdf-assistant
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: streamlit run main.py --server.port $PORT --server.address 0.0.0.0
+    envVars:
+      - key: PERPLEXITY_API_KEY_1
+        sync: false
+      - key: PERPLEXITY_API_KEY_2
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: SUPABASE_BUCKET_NAME
+        sync: false 
