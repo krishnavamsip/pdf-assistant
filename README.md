@@ -92,4 +92,4 @@ The application includes a sidebar option to view real-time API usage statistics
 1. **API Key Errors**: Ensure both API keys are valid and have sufficient credits
 2. **Rate Limiting**: The app includes built-in rate limiting, but you may need to adjust if you hit limits
 3. **JSON Parsing**: MCQ generation includes fallback logic if Perplexity doesn't return valid JSON
-4. **File Upload**: Ensure Supabase credentials are correct for file storage functionality 
+4. **File Upload**: Ensure Supabase credentials are correct for file storage functionality
