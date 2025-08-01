@@ -35,21 +35,21 @@ st.sidebar.markdown("""
 """)
 st.sidebar.info("Developed using Streamlit and AI.")
 
-# Show API usage stats in sidebar
-if ai_available and st.sidebar.checkbox("Show API Usage Stats"):
-    try:
-        stats = ai.get_usage_stats()
-        st.sidebar.subheader("API Usage Statistics")
-        for key_name, key_stats in stats.items():
-            st.sidebar.metric(
-                label=f"{key_name.upper()}",
-                value=f"{key_stats['requests']} requests",
-                delta=f"{key_stats['success_rate']:.1f}% success"
-            )
-    except Exception as e:
-        st.sidebar.error(f"Could not load stats: {e}")
-elif not ai_available:
-    st.sidebar.warning("⚠️ AI features unavailable - configure API keys first")
+# Show API usage stats in sidebar - DISABLED
+# if ai_available and st.sidebar.checkbox("Show API Usage Stats"):
+#     try:
+#         stats = ai.get_usage_stats()
+#         st.sidebar.subheader("API Usage Statistics")
+#         for key_name, key_stats in stats.items():
+#             st.sidebar.metric(
+#                 label=f"{key_name.upper()}",
+#                 value=f"{key_stats['requests']} requests",
+#                 delta=f"{key_stats['success_rate']:.1f}% success"
+#             )
+#     except Exception as e:
+#         st.sidebar.error(f"Could not load stats: {e}")
+# elif not ai_available:
+#     st.sidebar.warning("⚠️ AI features unavailable - configure API keys first")
 
 # --- Main Title ---
 st.title("PDF Assistant")
