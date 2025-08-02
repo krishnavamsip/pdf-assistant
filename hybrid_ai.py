@@ -397,12 +397,17 @@ class HybridAI:
     
     def generate_mcqs(self, text: str, num_questions: int = 5) -> List[Dict[str, Any]]:
         """Generate multiple choice questions using Perplexity"""
+        import random
+        
         # Smart text sampling to avoid preface/front matter
         max_chars = Config.MAX_MCQ_CHARS
         
         if len(text) > max_chars:
             # Sample from different parts of the document
             text = self._sample_text_for_mcqs(text, max_chars)
+        
+        # Add randomization seed to get different questions each time
+        random_seed = random.randint(1, 10000)
         
         prompt = f"""
         Generate {num_questions} multiple choice questions based on the following text. 
@@ -416,6 +421,9 @@ class HybridAI:
         6. Make sure questions cover different difficulty levels (basic concepts to advanced topics)
         7. If the text contains preface/acknowledgments, IGNORE those sections completely
         8. Focus on the substantive educational content only
+        9. Use randomization seed {random_seed} to ensure variety in question selection
+        10. DO NOT ask about the author, book title, publisher, or any metadata
+        11. ONLY ask about the actual subject matter and educational concepts
         
         Question Types to Include:
         - Definition questions (What is X?)
@@ -508,51 +516,76 @@ class HybridAI:
     def _sample_text_for_mcqs(self, text: str, max_chars: int) -> str:
         """Smart sampling to get content from different parts of the document"""
         import re
+        import random
         
         # Split text into paragraphs
         paragraphs = [p.strip() for p in text.split('\n\n') if p.strip()]
         
-        if len(paragraphs) <= 3:
-            # If few paragraphs, just take the middle portion
-            start_idx = len(text) // 4  # Start from 25% into the text
+        # Filter out preface/acknowledgments content more aggressively
+        filtered_paragraphs = []
+        preface_keywords = ['preface', 'acknowledgment', 'acknowledgement', 'foreword', 'introduction', 
+                           'copyright', 'publisher', 'author', 'editor', 'dedication', 'table of contents']
+        
+        for paragraph in paragraphs:
+            # Skip paragraphs that contain preface keywords
+            if any(keyword in paragraph.lower() for keyword in preface_keywords):
+                continue
+            # Skip very short paragraphs (likely headers)
+            if len(paragraph) < 50:
+                continue
+            # Skip paragraphs that are mostly numbers or special characters
+            if len(re.findall(r'[a-zA-Z]', paragraph)) < len(paragraph) * 0.3:
+                continue
+            filtered_paragraphs.append(paragraph)
+        
+        if len(filtered_paragraphs) <= 3:
+            # If few paragraphs, take from middle of original text
+            start_idx = len(text) // 3  # Start from 33% into the text
             end_idx = start_idx + max_chars
             return text[start_idx:end_idx]
         
-        # Skip preface/acknowledgments (first few paragraphs)
-        skip_paragraphs = min(5, len(paragraphs) // 4)  # Skip first 25% of paragraphs
+        # Skip first 30% of filtered paragraphs to avoid any remaining preface content
+        skip_count = max(3, len(filtered_paragraphs) // 3)
+        content_paragraphs = filtered_paragraphs[skip_count:]
         
-        # Sample from different sections
-        total_paragraphs = len(paragraphs)
-        sample_size = max_chars // 200  # Approximate chars per paragraph
+        if not content_paragraphs:
+            # If no content paragraphs, fall back to middle of original text
+            start_idx = len(text) // 2
+            end_idx = start_idx + max_chars
+            return text[start_idx:end_idx]
         
+        # Randomly sample from different sections
         sampled_paragraphs = []
         
-        # Sample from middle section (30-70% of document)
-        middle_start = skip_paragraphs + (total_paragraphs - skip_paragraphs) // 3
-        middle_end = skip_paragraphs + 2 * (total_paragraphs - skip_paragraphs) // 3
+        # Sample from middle section (40-80% of content)
+        middle_start = len(content_paragraphs) // 5
+        middle_end = 4 * len(content_paragraphs) // 5
         
-        # Get paragraphs from middle section
-        middle_paragraphs = paragraphs[middle_start:middle_end]
+        middle_paragraphs = content_paragraphs[middle_start:middle_end]
         if middle_paragraphs:
-            # Take every 3rd paragraph to get variety
-            step = max(1, len(middle_paragraphs) // (sample_size // 2))
-            sampled_paragraphs.extend(middle_paragraphs[::step])
+            # Randomly select paragraphs with some spacing
+            step = max(1, len(middle_paragraphs) // 8)
+            for i in range(0, len(middle_paragraphs), step):
+                if len(sampled_paragraphs) < 5:  # Limit to 5 paragraphs
+                    sampled_paragraphs.append(middle_paragraphs[i])
         
         # If we need more content, sample from later sections
         if len(' '.join(sampled_paragraphs)) < max_chars // 2:
-            later_start = middle_end
-            later_paragraphs = paragraphs[later_start:]
+            later_paragraphs = content_paragraphs[middle_end:]
             if later_paragraphs:
-                step = max(1, len(later_paragraphs) // (sample_size // 2))
-                sampled_paragraphs.extend(later_paragraphs[::step])
+                # Randomly select from later paragraphs
+                random.shuffle(later_paragraphs)
+                for paragraph in later_paragraphs[:3]:  # Take up to 3 more
+                    if len(' '.join(sampled_paragraphs)) + len(paragraph) < max_chars:
+                        sampled_paragraphs.append(paragraph)
         
         # Combine sampled paragraphs
         sampled_text = '\n\n'.join(sampled_paragraphs)
         
-        # If still too short, add some from the beginning (but skip first few paragraphs)
-        if len(sampled_text) < max_chars // 2:
-            early_paragraphs = paragraphs[skip_paragraphs:skip_paragraphs + 3]
-            sampled_text = '\n\n'.join(early_paragraphs) + '\n\n' + sampled_text
+        # If still too short, add some from the beginning of content (not preface)
+        if len(sampled_text) < max_chars // 2 and len(content_paragraphs) > 0:
+            early_content = content_paragraphs[:2]  # Take first 2 content paragraphs
+            sampled_text = '\n\n'.join(early_content) + '\n\n' + sampled_text
         
         # Truncate if still too long
         if len(sampled_text) > max_chars:

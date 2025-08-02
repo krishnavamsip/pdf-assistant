@@ -365,8 +365,13 @@ if st.session_state.pdf_text:
                 try:
                     # Show what text is being used (for debugging)
                     with st.expander("🔍 Debug: Text being used for MCQs", expanded=False):
-                        sample_text = st.session_state.pdf_text[:1000] + "..." if len(st.session_state.pdf_text) > 1000 else st.session_state.pdf_text
-                        st.text_area("First 1000 characters of text:", sample_text, height=200)
+                        # Show the actual sampled text that will be used for MCQs
+                        from hybrid_ai import HybridAI
+                        temp_ai = HybridAI()
+                        sampled_text = temp_ai._sample_text_for_mcqs(st.session_state.pdf_text, 15000)
+                        st.text_area("Sampled text for MCQs (filtered to avoid preface):", sampled_text[:2000] + "..." if len(sampled_text) > 2000 else sampled_text, height=300)
+                        st.info(f"Original text length: {len(st.session_state.pdf_text)} characters")
+                        st.info(f"Sampled text length: {len(sampled_text)} characters")
                     
                     st.session_state.mcqs = ai.generate_mcqs(st.session_state.pdf_text, num_qs)
                     if st.session_state.mcqs:
