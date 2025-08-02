@@ -175,7 +175,58 @@ class HybridAI:
         if current_chunk.strip():
             chunks.append(current_chunk.strip())
         
+        # If we only have one chunk, try to split it more intelligently
+        if len(chunks) == 1 and len(text) > max_chars:
+            # Try to split at chapter boundaries
+            chapter_splits = self._split_at_chapters(text, max_chars)
+            if len(chapter_splits) > 1:
+                return chapter_splits
+        
         return chunks
+    
+    def _split_at_chapters(self, text: str, max_chars: int) -> list:
+        """Split text at chapter boundaries when possible"""
+        import re
+        
+        # Look for chapter patterns
+        chapter_patterns = [
+            r'Chapter\s+\d+[:\s]',  # Chapter 1:, Chapter 2, etc.
+            r'CHAPTER\s+\d+[:\s]',  # CHAPTER 1:, CHAPTER 2, etc.
+            r'\d+\.\s+[A-Z]',       # 1. Title, 2. Title, etc.
+            r'Section\s+\d+[:\s]',  # Section 1:, Section 2, etc.
+        ]
+        
+        # Find all chapter positions
+        chapter_positions = []
+        for pattern in chapter_patterns:
+            matches = list(re.finditer(pattern, text, re.IGNORECASE))
+            chapter_positions.extend([match.start() for match in matches])
+        
+        chapter_positions.sort()
+        
+        if not chapter_positions:
+            # No chapters found, split by size
+            return [text[i:i+max_chars] for i in range(0, len(text), max_chars)]
+        
+        # Split at chapter boundaries
+        chunks = []
+        start = 0
+        
+        for pos in chapter_positions:
+            if pos - start > max_chars:
+                # Current chunk is too big, split it
+                chunks.append(text[start:start+max_chars])
+                start = start + max_chars
+            elif pos - start > 0:
+                # Add chunk up to this chapter
+                chunks.append(text[start:pos])
+                start = pos
+        
+        # Add the last chunk
+        if start < len(text):
+            chunks.append(text[start:])
+        
+        return [chunk.strip() for chunk in chunks if chunk.strip()]
     
     def _process_chunk_summary(self, text: str, chunk_num: int, total_chunks: int) -> str:
         """Process a single chunk of text"""

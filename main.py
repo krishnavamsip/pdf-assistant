@@ -120,7 +120,17 @@ if uploaded_file and uploaded_file.name != st.session_state.uploaded_filename:
             text_parts = []
             
             for i, page in enumerate(pdf.pages):
+                # Try multiple extraction methods
                 page_text = page.extract_text() or ""
+                
+                # If no text found, try alternative extraction
+                if not page_text.strip():
+                    # Try extracting tables and other elements
+                    tables = page.extract_tables()
+                    for table in tables:
+                        for row in table:
+                            page_text += " ".join([str(cell) for cell in row if cell]) + "\n"
+                
                 text_parts.append(page_text)
                 
                 # Update progress
@@ -131,8 +141,32 @@ if uploaded_file and uploaded_file.name != st.session_state.uploaded_filename:
             extract_progress.progress(100, text="✅ Text extraction complete!")
             st.session_state.pdf_text = text
             
-            # Show text statistics
+            # Show text statistics and preview
             st.info(f"📊 Extracted {len(text)} characters from {total_pages} pages")
+            
+            # Show a preview of the extracted text to help debug
+            with st.expander("🔍 Text Preview (First 1000 characters)", expanded=False):
+                preview = text[:1000] + "..." if len(text) > 1000 else text
+                st.text(preview)
+            
+            # Check for chapter indicators
+            chapter_count = text.lower().count("chapter")
+            st.info(f"📚 Found {chapter_count} chapter references in the text")
+            
+            # Try to identify table of contents
+            toc_lines = []
+            lines = text.split('\n')
+            for i, line in enumerate(lines):
+                if any(keyword in line.lower() for keyword in ['contents', 'table of contents', 'index']):
+                    # Found TOC, collect next few lines
+                    for j in range(i, min(i + 20, len(lines))):
+                        if lines[j].strip():
+                            toc_lines.append(lines[j])
+                    break
+            
+            if toc_lines:
+                with st.expander("📋 Table of Contents Preview", expanded=False):
+                    st.text('\n'.join(toc_lines[:10]))  # Show first 10 lines
             
     except Exception as e:
         extract_progress.empty()
