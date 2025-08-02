@@ -161,20 +161,42 @@ if uploaded_file and uploaded_file.name != st.session_state.uploaded_filename:
             # Show text statistics and preview
             st.info(f"📊 Extracted {len(text)} characters from {total_pages} pages")
             
-            # Show page-by-page extraction details
-            with st.expander("📄 Page-by-Page Extraction Details", expanded=False):
-                for i, page_text in enumerate(text_parts):
-                    page_num = i + 1
-                    char_count = len(page_text)
-                    word_count = len(page_text.split())
-                    status = "✅" if char_count > 0 else "❌"
-                    st.text(f"Page {page_num}: {status} {char_count} chars, {word_count} words")
+            # Show extraction summary instead of page-by-page details
+            with st.expander("📄 Extraction Summary", expanded=False):
+                # Count pages with content
+                pages_with_content = sum(1 for page_text in text_parts if len(page_text.strip()) > 0)
+                pages_without_content = total_pages - pages_with_content
+                
+                # Calculate average content per page
+                total_chars = sum(len(page_text) for page_text in text_parts)
+                avg_chars_per_page = total_chars / total_pages if total_pages > 0 else 0
+                
+                st.text(f"📊 Total Pages: {total_pages}")
+                st.text(f"✅ Pages with content: {pages_with_content}")
+                st.text(f"❌ Empty pages: {pages_without_content}")
+                st.text(f"📝 Average chars per page: {avg_chars_per_page:.0f}")
+                st.text(f"📚 Total characters: {total_chars:,}")
+                
+                # Show sample pages (first, middle, last)
+                if total_pages > 0:
+                    st.text("")
+                    st.text("📖 Sample Pages:")
                     
-                    # Show first 100 chars of each page
-                    if char_count > 0:
-                        preview = page_text[:100] + "..." if char_count > 100 else page_text
-                        st.text(f"   Preview: {preview}")
-                    st.text("")  # Empty line for spacing
+                    # First page
+                    if text_parts[0].strip():
+                        preview = text_parts[0][:100] + "..." if len(text_parts[0]) > 100 else text_parts[0]
+                        st.text(f"   Page 1: {preview}")
+                    
+                    # Middle page
+                    middle_idx = total_pages // 2
+                    if text_parts[middle_idx].strip():
+                        preview = text_parts[middle_idx][:100] + "..." if len(text_parts[middle_idx]) > 100 else text_parts[middle_idx]
+                        st.text(f"   Page {middle_idx + 1}: {preview}")
+                    
+                    # Last page
+                    if text_parts[-1].strip():
+                        preview = text_parts[-1][:100] + "..." if len(text_parts[-1]) > 100 else text_parts[-1]
+                        st.text(f"   Page {total_pages}: {preview}")
             
             # Show a preview of the extracted text to help debug
             with st.expander("🔍 Text Preview (First 1000 characters)", expanded=False):
