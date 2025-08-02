@@ -118,24 +118,109 @@ class HybridAI:
     
     def get_summary(self, text: str, progress_callback=None) -> str:
         """Generate a comprehensive summary using Perplexity"""
-        # Truncate text if too long (Perplexity has token limits)
+        # Split text into chunks if it's too long
         max_chars = Config.MAX_SUMMARY_CHARS
         if len(text) > max_chars:
-            text = text[:max_chars] + "..."
+            # Split into chunks and process each
+            chunks = self._split_text_into_chunks(text, max_chars)
+            summaries = []
+            
+            for i, chunk in enumerate(chunks):
+                if progress_callback:
+                    progress_percent = (i + 1) / len(chunks)
+                    progress_callback(progress_percent * 0.8, f"Processing chunk {i+1}/{len(chunks)}...")
+                
+                chunk_summary = self._process_chunk_summary(chunk, i+1, len(chunks))
+                summaries.append(chunk_summary)
+            
+            # Combine summaries
+            if progress_callback:
+                progress_callback(0.9, "Combining summaries...")
+            
+            combined_summary = self._combine_summaries(summaries)
+            
+            if progress_callback:
+                progress_callback(1.0, "✅ Summary complete!")
+            
+            return combined_summary
+        else:
+            # Process single chunk
+            if progress_callback:
+                progress_callback(0.5, "Processing text...")
+            
+            summary = self._process_chunk_summary(text, 1, 1)
+            
+            if progress_callback:
+                progress_callback(1.0, "✅ Summary complete!")
+            
+            return summary
+    
+    def _split_text_into_chunks(self, text: str, max_chars: int) -> list:
+        """Split text into chunks, trying to break at chapter boundaries"""
+        chunks = []
+        current_chunk = ""
         
+        # Split by lines to preserve structure
+        lines = text.split('\n')
+        
+        for line in lines:
+            # Check if this line would exceed the limit
+            if len(current_chunk + line) > max_chars and current_chunk:
+                chunks.append(current_chunk.strip())
+                current_chunk = line + '\n'
+            else:
+                current_chunk += line + '\n'
+        
+        # Add the last chunk
+        if current_chunk.strip():
+            chunks.append(current_chunk.strip())
+        
+        return chunks
+    
+    def _process_chunk_summary(self, text: str, chunk_num: int, total_chunks: int) -> str:
+        """Process a single chunk of text"""
         prompt = f"""
-        Please provide a comprehensive, chapter-by-chapter summary of the following text. 
+        This is chunk {chunk_num} of {total_chunks} from a larger document. 
+        Please provide a comprehensive summary of this section.
         
         IMPORTANT: Skip author information, preface, acknowledgments, and focus ONLY on the actual content.
         
         Structure your summary like this:
         
-        ## Chapter 1: [Chapter Title]
-        - **Main Topics**: [List the main topics covered in this chapter]
+        ## Section {chunk_num}: [Section Title or Chapter Title]
+        - **Main Topics**: [List the main topics covered in this section]
         - **Key Concepts**: [Important concepts, definitions, or theories introduced]
-        - **Key Points**: [3-5 most important points from this chapter]
+        - **Key Points**: [3-5 most important points from this section]
         
-        ## Chapter 2: [Chapter Title]
+        If you can identify chapter titles or section headers, use them. Otherwise, describe the content clearly.
+        
+        Text to summarize:
+        {text}
+        
+        Focus on the actual educational content, not metadata about the book or author.
+        """
+        
+        try:
+            return self._make_request_with_fallback(prompt)
+        except Exception as e:
+            return f"Error processing chunk {chunk_num}: {str(e)}"
+    
+    def _combine_summaries(self, summaries: list) -> str:
+        """Combine multiple chunk summaries into a final summary"""
+        combined_text = "\n\n".join(summaries)
+        
+        prompt = f"""
+        Please combine and organize the following summaries into a comprehensive, well-structured summary.
+        
+        IMPORTANT: 
+        1. Remove any duplicate information
+        2. Organize by chapters or major sections
+        3. Create a coherent flow
+        4. Add an overall summary at the end
+        
+        Structure the final summary like this:
+        
+        ## Chapter 1: [Chapter Title]
         - **Main Topics**: [List the main topics covered in this chapter]
         - **Key Concepts**: [Important concepts, definitions, or theories introduced]
         - **Key Points**: [3-5 most important points from this chapter]
@@ -147,28 +232,15 @@ class HybridAI:
         - **Main Themes**: [Recurring themes across chapters]
         - **Key Takeaways**: [Most important learnings from the entire book]
         
-        If the text doesn't have clear chapters, organize by major sections or topics instead.
-        
-        Text to summarize:
-        {text}
-        
-        Focus on the actual educational content, not metadata about the book or author.
+        Summaries to combine:
+        {combined_text}
         """
         
-        if progress_callback:
-            progress_callback(0.5)  # Indicate processing started
-        
         try:
-            summary = self._make_request_with_fallback(prompt)
-            
-            if progress_callback:
-                progress_callback(1.0)  # Indicate completion
-            
-            return summary
+            return self._make_request_with_fallback(prompt)
         except Exception as e:
-            if progress_callback:
-                progress_callback(1.0)
-            return f"Error generating summary: {str(e)}"
+            # If combining fails, just return the summaries concatenated
+            return f"## Combined Summary\n\n" + "\n\n".join(summaries)
     
     def generate_mcqs(self, text: str, num_questions: int = 5) -> List[Dict[str, Any]]:
         """Generate multiple choice questions using Perplexity"""
