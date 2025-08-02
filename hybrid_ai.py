@@ -501,6 +501,103 @@ class HybridAI:
         
         return questions
     
+    def detect_chapters(self, text: str) -> List[Dict[str, Any]]:
+        """Detect chapters in the text and return their positions"""
+        import re
+        
+        chapters = []
+        lines = text.split('\n')
+        
+        for i, line in enumerate(lines):
+            line = line.strip()
+            if not line:
+                continue
+            
+            # Look for chapter patterns
+            chapter_match = None
+            
+            # Pattern 1: "Chapter 1: Title" or "CHAPTER 1: Title"
+            match = re.match(r'^(?:Chapter|CHAPTER)\s+(\d+)[:\s]+(.+)$', line, re.IGNORECASE)
+            if match:
+                chapter_match = {
+                    'number': int(match.group(1)),
+                    'title': match.group(2).strip(),
+                    'line_number': i,
+                    'full_line': line
+                }
+            
+            # Pattern 2: "1. Title" or "1 Title"
+            if not chapter_match:
+                match = re.match(r'^(\d+)[\.\s]+([A-Z][^.]*)$', line)
+                if match:
+                    chapter_match = {
+                        'number': int(match.group(1)),
+                        'title': match.group(2).strip(),
+                        'line_number': i,
+                        'full_line': line
+                    }
+            
+            # Pattern 3: "Section 1: Title"
+            if not chapter_match:
+                match = re.match(r'^(?:Section|SECTION)\s+(\d+)[:\s]+(.+)$', line, re.IGNORECASE)
+                if match:
+                    chapter_match = {
+                        'number': int(match.group(1)),
+                        'title': match.group(2).strip(),
+                        'line_number': i,
+                        'full_line': line
+                    }
+            
+            if chapter_match:
+                chapters.append(chapter_match)
+        
+        # Sort by chapter number
+        chapters.sort(key=lambda x: x['number'])
+        
+        # Estimate page ranges (rough approximation)
+        total_lines = len(lines)
+        for i, chapter in enumerate(chapters):
+            if i == 0:
+                chapter['start_page'] = 1
+            else:
+                # Estimate start page based on line position
+                chapter['start_page'] = max(1, (chapter['line_number'] * 100) // total_lines)
+            
+            if i == len(chapters) - 1:
+                chapter['end_page'] = "end"
+            else:
+                # Estimate end page based on next chapter position
+                next_chapter = chapters[i + 1]
+                chapter['end_page'] = max(1, (next_chapter['line_number'] * 100) // total_lines)
+        
+        return chapters
+    
+    def extract_chapter_text(self, full_text: str, chapter_data: Dict[str, Any]) -> str:
+        """Extract text for a specific chapter"""
+        lines = full_text.split('\n')
+        start_line = chapter_data['line_number']
+        
+        # Find the end of this chapter (start of next chapter or end of text)
+        end_line = len(lines)
+        
+        # Look for the next chapter
+        for i in range(start_line + 1, len(lines)):
+            line = lines[i].strip()
+            if line and any(pattern in line for pattern in ['Chapter', 'CHAPTER', 'Section', 'SECTION']):
+                # Check if it's a new chapter number
+                if re.match(r'^(?:Chapter|CHAPTER|Section|SECTION)\s+\d+', line, re.IGNORECASE):
+                    end_line = i
+                    break
+                elif re.match(r'^\d+[\.\s]+[A-Z]', line):
+                    end_line = i
+                    break
+        
+        # Extract the chapter text
+        chapter_lines = lines[start_line:end_line]
+        chapter_text = '\n'.join(chapter_lines)
+        
+        return chapter_text
+    
     def answer_question(self, context: str, question: str) -> tuple[str, str]:
         """Answer a specific question based on the provided context"""
         # Truncate context if too long

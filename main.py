@@ -213,23 +213,66 @@ if st.session_state.pdf_text:
         if 'summary' not in st.session_state:
             st.session_state.summary = None
         
-        if st.button("Generate Summary", type="primary"):
-            progress = st.progress(0, text="Summarizing...")
-            def update_progress(val, text=None):
-                if text:
-                    progress.progress(val, text=text)
-                else:
-                    progress.progress(val, text=f"Summarizing... {int(val*100)}%")
-            try:
-                summary = ai.get_summary(st.session_state.pdf_text, progress_callback=update_progress)
-                progress.empty()
-                st.session_state.summary = summary
-                with st.expander("📌 Summary", expanded=True):
-                    st.markdown(summary)
-            except Exception as e:
-                progress.empty()
-                st.error(f"❌ Summary generation failed: {e}")
-        elif st.session_state.summary:
+        # Detect chapters in the text
+        chapters = ai.detect_chapters(st.session_state.pdf_text)
+        
+        if chapters:
+            st.subheader("📚 Available Chapters")
+            st.write("Select a chapter to summarize:")
+            
+            # Create chapter selection
+            chapter_options = ["All Chapters (Full Book Summary)"] + [f"{ch['title']} (Pages {ch['start_page']}-{ch['end_page']})" for ch in chapters]
+            selected_chapter = st.selectbox("Choose chapter:", chapter_options, key="chapter_selector")
+            
+            if st.button("Generate Summary", type="primary"):
+                progress = st.progress(0, text="Summarizing...")
+                def update_progress(val, text=None):
+                    if text:
+                        progress.progress(val, text=text)
+                    else:
+                        progress.progress(val, text=f"Summarizing... {int(val*100)}%")
+                
+                try:
+                    if selected_chapter == "All Chapters (Full Book Summary)":
+                        # Generate full book summary
+                        summary = ai.get_summary(st.session_state.pdf_text, progress_callback=update_progress)
+                    else:
+                        # Generate chapter-specific summary
+                        chapter_index = chapter_options.index(selected_chapter) - 1  # -1 because of "All Chapters" option
+                        selected_chapter_data = chapters[chapter_index]
+                        chapter_text = ai.extract_chapter_text(st.session_state.pdf_text, selected_chapter_data)
+                        summary = ai.get_summary(chapter_text, progress_callback=update_progress)
+                    
+                    progress.empty()
+                    st.session_state.summary = summary
+                    with st.expander("📌 Summary", expanded=True):
+                        st.markdown(summary)
+                except Exception as e:
+                    progress.empty()
+                    st.error(f"❌ Summary generation failed: {e}")
+        else:
+            # Fallback for documents without clear chapters
+            st.info("📖 No clear chapters detected. Generating full document summary...")
+            
+            if st.button("Generate Summary", type="primary"):
+                progress = st.progress(0, text="Summarizing...")
+                def update_progress(val, text=None):
+                    if text:
+                        progress.progress(val, text=text)
+                    else:
+                        progress.progress(val, text=f"Summarizing... {int(val*100)}%")
+                try:
+                    summary = ai.get_summary(st.session_state.pdf_text, progress_callback=update_progress)
+                    progress.empty()
+                    st.session_state.summary = summary
+                    with st.expander("📌 Summary", expanded=True):
+                        st.markdown(summary)
+                except Exception as e:
+                    progress.empty()
+                    st.error(f"❌ Summary generation failed: {e}")
+        
+        # Show existing summary if available
+        if st.session_state.summary:
             with st.expander("📌 Summary", expanded=True):
                 st.markdown(st.session_state.summary)
             if st.button("Regenerate Summary"):
