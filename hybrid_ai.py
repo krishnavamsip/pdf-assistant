@@ -123,12 +123,23 @@ class HybridAI:
         if len(text) > max_chars:
             # Split into chunks and process each
             chunks = self._split_text_into_chunks(text, max_chars)
+            
+            # Limit to maximum 10 chunks to avoid rate limits
+            if len(chunks) > 10:
+                # Combine chunks to reduce total number
+                combined_chunks = self._combine_chunks_to_limit(chunks, 10)
+                chunks = combined_chunks
+            
             summaries = []
             
             for i, chunk in enumerate(chunks):
                 if progress_callback:
                     progress_percent = (i + 1) / len(chunks)
                     progress_callback(progress_percent * 0.8, f"Processing chunk {i+1}/{len(chunks)}...")
+                
+                # Add delay between requests to respect rate limits
+                if i > 0:
+                    time.sleep(Config.MIN_REQUEST_INTERVAL)
                 
                 chunk_summary = self._process_chunk_summary(chunk, i+1, len(chunks))
                 summaries.append(chunk_summary)
@@ -228,6 +239,21 @@ class HybridAI:
         
         return [chunk.strip() for chunk in chunks if chunk.strip()]
     
+    def _combine_chunks_to_limit(self, chunks: list, max_chunks: int) -> list:
+        """Combine chunks to limit the total number"""
+        if len(chunks) <= max_chunks:
+            return chunks
+        
+        # Calculate how many chunks to combine
+        combine_factor = len(chunks) // max_chunks + 1
+        
+        combined_chunks = []
+        for i in range(0, len(chunks), combine_factor):
+            combined_text = "\n\n".join(chunks[i:i+combine_factor])
+            combined_chunks.append(combined_text)
+        
+        return combined_chunks
+    
     def _process_chunk_summary(self, text: str, chunk_num: int, total_chunks: int) -> str:
         """Process a single chunk of text"""
         prompt = f"""
@@ -254,7 +280,11 @@ class HybridAI:
         try:
             return self._make_request_with_fallback(prompt)
         except Exception as e:
-            return f"Error processing chunk {chunk_num}: {str(e)}"
+            # If it's a rate limit error, provide helpful message
+            if "rate limit" in str(e).lower() or "429" in str(e):
+                return f"Rate limit reached while processing chunk {chunk_num}. Please wait a moment and try again."
+            else:
+                return f"Error processing chunk {chunk_num}: {str(e)}"
     
     def _combine_summaries(self, summaries: list) -> str:
         """Combine multiple chunk summaries into a final summary"""
