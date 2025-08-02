@@ -158,74 +158,8 @@ if uploaded_file and uploaded_file.name != st.session_state.uploaded_filename:
             extract_progress.progress(100, text="✅ Text extraction complete!")
             st.session_state.pdf_text = text
             
-            # Show text statistics and preview
-            st.info(f"📊 Extracted {len(text)} characters from {total_pages} pages")
-            
-            # Show extraction summary instead of page-by-page details
-            with st.expander("📄 Extraction Summary", expanded=False):
-                # Count pages with content
-                pages_with_content = sum(1 for page_text in text_parts if len(page_text.strip()) > 0)
-                pages_without_content = total_pages - pages_with_content
-                
-                # Calculate average content per page
-                total_chars = sum(len(page_text) for page_text in text_parts)
-                avg_chars_per_page = total_chars / total_pages if total_pages > 0 else 0
-                
-                st.text(f"📊 Total Pages: {total_pages}")
-                st.text(f"✅ Pages with content: {pages_with_content}")
-                st.text(f"❌ Empty pages: {pages_without_content}")
-                st.text(f"📝 Average chars per page: {avg_chars_per_page:.0f}")
-                st.text(f"📚 Total characters: {total_chars:,}")
-                
-                # Show sample pages (first, middle, last)
-                if total_pages > 0:
-                    st.text("")
-                    st.text("📖 Sample Pages:")
-                    
-                    # First page
-                    if text_parts[0].strip():
-                        preview = text_parts[0][:100] + "..." if len(text_parts[0]) > 100 else text_parts[0]
-                        st.text(f"   Page 1: {preview}")
-                    
-                    # Middle page
-                    middle_idx = total_pages // 2
-                    if text_parts[middle_idx].strip():
-                        preview = text_parts[middle_idx][:100] + "..." if len(text_parts[middle_idx]) > 100 else text_parts[middle_idx]
-                        st.text(f"   Page {middle_idx + 1}: {preview}")
-                    
-                    # Last page
-                    if text_parts[-1].strip():
-                        preview = text_parts[-1][:100] + "..." if len(text_parts[-1]) > 100 else text_parts[-1]
-                        st.text(f"   Page {total_pages}: {preview}")
-            
-            # Show a preview of the extracted text to help debug
-            with st.expander("🔍 Text Preview (First 1000 characters)", expanded=False):
-                preview = text[:1000] + "..." if len(text) > 1000 else text
-                st.text(preview)
-            
-            # Check for chapter indicators
-            chapter_count = text.lower().count("chapter")
-            st.info(f"📚 Found {chapter_count} chapter references in the text")
-            
-            # Try to identify table of contents
-            toc_lines = []
-            lines = text.split('\n')
-            for i, line in enumerate(lines):
-                if any(keyword in line.lower() for keyword in ['contents', 'table of contents', 'index']):
-                    # Found TOC, collect next few lines
-                    for j in range(i, min(i + 20, len(lines))):
-                        if lines[j].strip():
-                            toc_lines.append(lines[j])
-                    break
-            
-            if toc_lines:
-                with st.expander("📋 Table of Contents Preview", expanded=False):
-                    st.text('\n'.join(toc_lines[:10]))  # Show first 10 lines
-            
-            # If extraction seems incomplete, suggest alternative methods
-            if len(text) < 10000 and total_pages > 10:  # Suspiciously small text for many pages
-                st.warning("⚠️ Text extraction may be incomplete. The PDF might be image-based or have special formatting.")
-                st.info("💡 Try: 1) Converting PDF to text first, 2) Using OCR tools, or 3) Copying text manually")
+            # Show basic extraction info
+            st.success(f"✅ Successfully extracted {len(text):,} characters from {total_pages} pages")
             
     except Exception as e:
         extract_progress.empty()
@@ -281,8 +215,11 @@ if st.session_state.pdf_text:
         
         if st.button("Generate Summary", type="primary"):
             progress = st.progress(0, text="Summarizing...")
-            def update_progress(val):
-                progress.progress(val, text=f"Summarizing... {int(val*100)}%")
+            def update_progress(val, text=None):
+                if text:
+                    progress.progress(val, text=text)
+                else:
+                    progress.progress(val, text=f"Summarizing... {int(val*100)}%")
             try:
                 summary = ai.get_summary(st.session_state.pdf_text, progress_callback=update_progress)
                 progress.empty()
