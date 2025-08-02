@@ -214,7 +214,11 @@ if st.session_state.pdf_text:
             st.session_state.summary = None
         
         # Detect chapters in the text
-        chapters = ai.detect_chapters(st.session_state.pdf_text)
+        try:
+            chapters = ai.detect_chapters(st.session_state.pdf_text)
+        except Exception as e:
+            st.error(f"Error detecting chapters: {e}")
+            chapters = []
         
         if chapters:
             st.subheader("📚 Available Chapters")
@@ -238,10 +242,14 @@ if st.session_state.pdf_text:
                         summary = ai.get_summary(st.session_state.pdf_text, progress_callback=update_progress)
                     else:
                         # Generate chapter-specific summary
-                        chapter_index = chapter_options.index(selected_chapter) - 1  # -1 because of "All Chapters" option
-                        selected_chapter_data = chapters[chapter_index]
-                        chapter_text = ai.extract_chapter_text(st.session_state.pdf_text, selected_chapter_data)
-                        summary = ai.get_summary(chapter_text, progress_callback=update_progress)
+                        try:
+                            chapter_index = chapter_options.index(selected_chapter) - 1  # -1 because of "All Chapters" option
+                            selected_chapter_data = chapters[chapter_index]
+                            chapter_text = ai.extract_chapter_text(st.session_state.pdf_text, selected_chapter_data)
+                            summary = ai.get_summary(chapter_text, progress_callback=update_progress)
+                        except Exception as e:
+                            st.error(f"Error extracting chapter text: {e}")
+                            summary = "Error: Could not extract chapter content"
                     
                     progress.empty()
                     st.session_state.summary = summary
