@@ -115,6 +115,7 @@ if uploaded_file and uploaded_file.name != st.session_state.uploaded_filename:
     uploaded_file.seek(0)
     extract_progress = st.progress(0, text="Extracting text from PDF...")
     try:
+        # Try pdfplumber first
         with pdfplumber.open(uploaded_file) as pdf:
             total_pages = len(pdf.pages)
             text_parts = []
@@ -123,13 +124,29 @@ if uploaded_file and uploaded_file.name != st.session_state.uploaded_filename:
                 # Try multiple extraction methods
                 page_text = page.extract_text() or ""
                 
-                # If no text found, try alternative extraction
+                # If no text found, try alternative extraction methods
                 if not page_text.strip():
-                    # Try extracting tables and other elements
+                    # Method 1: Try extracting tables
                     tables = page.extract_tables()
                     for table in tables:
                         for row in table:
                             page_text += " ".join([str(cell) for cell in row if cell]) + "\n"
+                
+                # Method 2: Try extracting words directly
+                if not page_text.strip():
+                    words = page.extract_words()
+                    page_text = " ".join([word['text'] for word in words])
+                
+                # Method 3: Try extracting text with different parameters
+                if not page_text.strip():
+                    page_text = page.extract_text(layout=True) or ""
+                
+                # Method 4: Try extracting text with different encoding
+                if not page_text.strip():
+                    try:
+                        page_text = page.extract_text(encoding='utf-8') or ""
+                    except:
+                        pass
                 
                 text_parts.append(page_text)
                 
@@ -143,6 +160,21 @@ if uploaded_file and uploaded_file.name != st.session_state.uploaded_filename:
             
             # Show text statistics and preview
             st.info(f"📊 Extracted {len(text)} characters from {total_pages} pages")
+            
+            # Show page-by-page extraction details
+            with st.expander("📄 Page-by-Page Extraction Details", expanded=False):
+                for i, page_text in enumerate(text_parts):
+                    page_num = i + 1
+                    char_count = len(page_text)
+                    word_count = len(page_text.split())
+                    status = "✅" if char_count > 0 else "❌"
+                    st.text(f"Page {page_num}: {status} {char_count} chars, {word_count} words")
+                    
+                    # Show first 100 chars of each page
+                    if char_count > 0:
+                        preview = page_text[:100] + "..." if char_count > 100 else page_text
+                        st.text(f"   Preview: {preview}")
+                    st.text("")  # Empty line for spacing
             
             # Show a preview of the extracted text to help debug
             with st.expander("🔍 Text Preview (First 1000 characters)", expanded=False):
@@ -168,10 +200,43 @@ if uploaded_file and uploaded_file.name != st.session_state.uploaded_filename:
                 with st.expander("📋 Table of Contents Preview", expanded=False):
                     st.text('\n'.join(toc_lines[:10]))  # Show first 10 lines
             
+            # If extraction seems incomplete, suggest alternative methods
+            if len(text) < 10000 and total_pages > 10:  # Suspiciously small text for many pages
+                st.warning("⚠️ Text extraction may be incomplete. The PDF might be image-based or have special formatting.")
+                st.info("💡 Try: 1) Converting PDF to text first, 2) Using OCR tools, or 3) Copying text manually")
+            
     except Exception as e:
         extract_progress.empty()
-        st.error(f"❌ Failed to extract text: {e}")
-        st.stop()
+        st.warning(f"⚠️ pdfplumber failed: {e}")
+        st.info("🔄 Trying alternative extraction method...")
+        
+        # Try PyPDF2 as fallback
+        try:
+            uploaded_file.seek(0)
+            import PyPDF2
+            pdf_reader = PyPDF2.PdfReader(uploaded_file)
+            total_pages = len(pdf_reader.pages)
+            text_parts = []
+            
+            for i, page in enumerate(pdf_reader.pages):
+                page_text = page.extract_text() or ""
+                text_parts.append(page_text)
+                
+                # Update progress
+                progress_percent = (i + 1) / total_pages
+                extract_progress.progress(progress_percent, text=f"Extracting with PyPDF2... Page {i+1}/{total_pages}")
+            
+            text = "".join(text_parts)
+            extract_progress.progress(100, text="✅ Text extraction complete!")
+            st.session_state.pdf_text = text
+            
+            st.success("✅ Successfully extracted text using PyPDF2!")
+            st.info(f"📊 Extracted {len(text)} characters from {total_pages} pages")
+            
+        except Exception as e2:
+            extract_progress.empty()
+            st.error(f"❌ Both extraction methods failed: {e2}")
+            st.stop()
 
 # If a file is already uploaded and processed, show its status
 if st.session_state.uploaded_filename and st.session_state.public_url:
