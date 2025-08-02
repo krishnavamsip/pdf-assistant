@@ -35,9 +35,9 @@ class Config:
     MIN_REQUEST_INTERVAL = 60 / RATE_LIMIT_PER_MINUTE  # seconds between requests
     
     # Text Processing Limits
-    MAX_SUMMARY_CHARS = 8000
-    MAX_MCQ_CHARS = 6000
-    MAX_QA_CHARS = 6000
+    MAX_SUMMARY_CHARS = 50000  # Increased for full textbooks
+    MAX_MCQ_CHARS = 30000      # Increased for full textbooks
+    MAX_QA_CHARS = 20000       # Increased for full textbooks
     
     # Supabase Configuration
     SUPABASE_URL = os.getenv('SUPABASE_URL')

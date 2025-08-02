@@ -96,25 +96,48 @@ uploaded_file = st.file_uploader("Choose a PDF file", type="pdf")
 # Only process a new file upload
 if uploaded_file and uploaded_file.name != st.session_state.uploaded_filename:
     clear_uploaded_file()
-    with st.spinner("Uploading to cloud..."):
-        try:
-            public_url, unique_filename = upload_pdf_to_supabase(uploaded_file, st.session_state.user_id)
-            st.session_state.public_url = public_url
-            st.session_state.uploaded_filename = uploaded_file.name
-            st.session_state.unique_filename = unique_filename
-            st.success(f"✅ Uploaded to cloud: [Open PDF]({public_url})")
-        except Exception as e:
-            st.error(f"❌ Upload failed: {e}")
-            st.stop()
+    
+    # Upload progress
+    upload_progress = st.progress(0, text="Uploading to cloud...")
+    try:
+        public_url, unique_filename = upload_pdf_to_supabase(uploaded_file, st.session_state.user_id)
+        upload_progress.progress(100, text="✅ Uploaded to cloud!")
+        st.session_state.public_url = public_url
+        st.session_state.uploaded_filename = uploaded_file.name
+        st.session_state.unique_filename = unique_filename
+        st.success(f"✅ Uploaded to cloud: [Open PDF]({public_url})")
+    except Exception as e:
+        upload_progress.empty()
+        st.error(f"❌ Upload failed: {e}")
+        st.stop()
+    
+    # Text extraction progress
     uploaded_file.seek(0)
-    with st.spinner("Extracting text from PDF..."):
-        try:
-            with pdfplumber.open(uploaded_file) as pdf:
-                text = "".join(page.extract_text() or "" for page in pdf.pages)
+    extract_progress = st.progress(0, text="Extracting text from PDF...")
+    try:
+        with pdfplumber.open(uploaded_file) as pdf:
+            total_pages = len(pdf.pages)
+            text_parts = []
+            
+            for i, page in enumerate(pdf.pages):
+                page_text = page.extract_text() or ""
+                text_parts.append(page_text)
+                
+                # Update progress
+                progress_percent = (i + 1) / total_pages
+                extract_progress.progress(progress_percent, text=f"Extracting text from PDF... Page {i+1}/{total_pages}")
+            
+            text = "".join(text_parts)
+            extract_progress.progress(100, text="✅ Text extraction complete!")
             st.session_state.pdf_text = text
-        except Exception as e:
-            st.error(f"❌ Failed to extract text: {e}")
-            st.stop()
+            
+            # Show text statistics
+            st.info(f"📊 Extracted {len(text)} characters from {total_pages} pages")
+            
+    except Exception as e:
+        extract_progress.empty()
+        st.error(f"❌ Failed to extract text: {e}")
+        st.stop()
 
 # If a file is already uploaded and processed, show its status
 if st.session_state.uploaded_filename and st.session_state.public_url:
