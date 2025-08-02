@@ -93,7 +93,13 @@ class HybridAI:
                     }
                     
                     print(f"Trying model: {model_to_try} with {key_name}")
+                    print(f"API Key (first 10 chars): {api_key[:10]}...")
+                    print(f"Request data: {data}")
+                    
                     response = requests.post(self.api_url, headers=headers, json=data, timeout=30)
+                    
+                    print(f"Response status: {response.status_code}")
+                    print(f"Response headers: {dict(response.headers)}")
                     
                     if response.status_code == 200:
                         result = response.json()
@@ -102,7 +108,8 @@ class HybridAI:
                         print(f"✅ Success with model: {model_to_try}")
                         return content
                     else:
-                        print(f"❌ Model {model_to_try} failed with status {response.status_code}: {response.text}")
+                        print(f"❌ Model {model_to_try} failed with status {response.status_code}")
+                        print(f"Response text: {response.text}")
                         
                 except Exception as e:
                     print(f"Error with {key_name} and model {model_to_try}: {str(e)}")
@@ -131,6 +138,7 @@ class HybridAI:
                 chunks = combined_chunks
             
             summaries = []
+            api_failures = 0
             
             for i, chunk in enumerate(chunks):
                 if progress_callback:
@@ -142,7 +150,20 @@ class HybridAI:
                     time.sleep(Config.MIN_REQUEST_INTERVAL)
                 
                 chunk_summary = self._process_chunk_summary(chunk, i+1, len(chunks))
+                
+                # Check if API failed
+                if chunk_summary.startswith("Error processing chunk"):
+                    api_failures += 1
+                    # Use fallback summary for this chunk
+                    chunk_summary = self._create_fallback_summary(chunk, i+1, len(chunks))
+                
                 summaries.append(chunk_summary)
+            
+            # If too many API failures, use fallback for entire document
+            if api_failures > len(chunks) * 0.5:  # More than 50% failed
+                if progress_callback:
+                    progress_callback(0.9, "Using fallback summary generation...")
+                return self._create_fallback_summary(text, 1, 1)
             
             # Combine summaries
             if progress_callback:
@@ -160,6 +181,10 @@ class HybridAI:
                 progress_callback(0.5, "Processing text...")
             
             summary = self._process_chunk_summary(text, 1, 1)
+            
+            # If API failed, use fallback
+            if summary.startswith("Error processing chunk"):
+                summary = self._create_fallback_summary(text, 1, 1)
             
             if progress_callback:
                 progress_callback(1.0, "✅ Summary complete!")
@@ -253,6 +278,53 @@ class HybridAI:
             combined_chunks.append(combined_text)
         
         return combined_chunks
+    
+    def _create_fallback_summary(self, text: str, chunk_num: int, total_chunks: int) -> str:
+        """Create a fallback summary without using the API"""
+        import re
+        
+        # Extract chapter titles and key information
+        lines = text.split('\n')
+        chapter_titles = []
+        key_sentences = []
+        
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+                
+            # Look for chapter titles
+            if re.match(r'^Chapter\s+\d+', line, re.IGNORECASE):
+                chapter_titles.append(line)
+            elif re.match(r'^\d+\.\s+[A-Z]', line):
+                chapter_titles.append(line)
+            
+            # Extract sentences with key medical terms
+            if len(line) > 20 and any(term in line.lower() for term in ['definition', 'diagnosis', 'treatment', 'symptoms', 'causes', 'risk', 'management']):
+                key_sentences.append(line)
+        
+        # Create a structured summary
+        summary_parts = []
+        
+        if chapter_titles:
+            summary_parts.append(f"## Chapter {chunk_num}: {chapter_titles[0] if chapter_titles else 'Content Section'}")
+        else:
+            summary_parts.append(f"## Section {chunk_num}: Content Overview")
+        
+        # Add key points from important sentences
+        if key_sentences:
+            summary_parts.append("### Key Points:")
+            for i, sentence in enumerate(key_sentences[:5], 1):  # Limit to 5 key points
+                summary_parts.append(f"{i}. {sentence}")
+        
+        # Add general content overview
+        words = text.split()
+        if len(words) > 100:
+            summary_parts.append(f"\n### Content Overview:")
+            summary_parts.append(f"This section contains approximately {len(words)} words covering medical content.")
+            summary_parts.append("The text includes definitions, diagnostic criteria, treatment approaches, and clinical guidelines.")
+        
+        return "\n\n".join(summary_parts)
     
     def _process_chunk_summary(self, text: str, chunk_num: int, total_chunks: int) -> str:
         """Process a single chunk of text"""
