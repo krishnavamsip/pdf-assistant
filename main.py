@@ -11,11 +11,21 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Initialize HybridAI with Perplexity
+ai_available = False
+ai = None
+
 try:
-    # Validate configuration first
-    Config.validate_config()
-    ai = HybridAI()
-    ai_available = True
+    # Check if we have API keys before trying to validate
+    if Config.has_api_keys():
+        # Validate configuration first
+        Config.validate_config()
+        ai = HybridAI()
+        ai_available = True
+    else:
+        st.warning("⚠️ No API keys found. AI features will be disabled.")
+        st.info("To enable AI features, add your Perplexity API keys to Streamlit Cloud secrets.")
+        ai_available = False
+        ai = None
 except Exception as e:
     st.error(f"⚠️ AI Configuration Error: {e}")
     st.error("Please ensure your API keys are configured in Streamlit Cloud secrets.")
@@ -212,7 +222,12 @@ if st.session_state.pdf_text:
     if option == "Summarize":
         if 'summary' not in st.session_state:
             st.session_state.summary = None
-        
+
+        if not ai_available:
+            st.error("❌ AI features are not available. Please configure your API keys.")
+            st.info("Go to your app settings → Secrets and add your Perplexity API keys.")
+            st.stop()
+
         # Detect chapters in the text
         try:
             chapters = ai.detect_chapters(st.session_state.pdf_text)
@@ -290,6 +305,11 @@ if st.session_state.pdf_text:
             st.info("Click 'Generate Summary' to create a comprehensive summary of your PDF.")
 
     elif option == "Generate MCQs":
+        if not ai_available:
+            st.error("❌ AI features are not available. Please configure your API keys.")
+            st.info("Go to your app settings → Secrets and add your Perplexity API keys.")
+            st.stop()
+            
         num_qs = st.selectbox("Select number of questions", [5, 10, 20], key="num_qs")
         
         # Initialize session state
@@ -354,6 +374,11 @@ if st.session_state.pdf_text:
             st.info("Click 'Generate MCQs' to create multiple choice questions based on your PDF.")
 
     elif option == "Ask Questions (QA)":
+        if not ai_available:
+            st.error("❌ AI features are not available. Please configure your API keys.")
+            st.info("Go to your app settings → Secrets and add your Perplexity API keys.")
+            st.stop()
+            
         user_q = st.text_input("Ask a question based on the PDF")
         if user_q:
             with st.spinner("Thinking..."):
