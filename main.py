@@ -166,12 +166,6 @@ if st.session_state.pdf_text:
         if 'mcq_answers' not in st.session_state:
             st.session_state.mcq_answers = None
         
-        # Handle regenerate button
-        if st.button("Regenerate MCQs", key="regenerate_mcqs"):
-            st.session_state.mcqs = None
-            st.session_state.mcq_answers = None
-            st.rerun()
-        
         # Generate MCQs button
         if st.button("Generate MCQs", type="primary", key="generate_mcqs"):
             with st.spinner("Generating MCQs..."):
@@ -188,32 +182,42 @@ if st.session_state.pdf_text:
         
         # Display MCQs if available
         if st.session_state.mcqs and len(st.session_state.mcqs) > 0:
-            with st.expander("📝 Multiple Choice Questions", expanded=True):
-                for i, q in enumerate(st.session_state.mcqs):
-                    if isinstance(q, dict) and 'question' in q and 'options' in q and 'answer' in q:
-                        st.markdown(f"**Q{i+1}. {q['question']}**")
-                        
-                        # Ensure mcq_answers has the right length
-                        while len(st.session_state.mcq_answers) <= i:
-                            st.session_state.mcq_answers.append(None)
-                        
-                        selected = st.radio(
-                            "Choose answer",
-                            q['options'],
-                            key=f"mcq_{i}",
-                            index=q['options'].index(st.session_state.mcq_answers[i]) if st.session_state.mcq_answers[i] in q['options'] else None
-                        )
-                        
-                        if selected != st.session_state.mcq_answers[i]:
-                            st.session_state.mcq_answers[i] = selected
-                        
-                        if selected:
-                            if selected == q['answer']:
-                                st.success(f"✅ Correct! The answer is: {q['answer']}")
-                            else:
-                                st.error(f"❌ Wrong! The correct answer is: {q['answer']}")
-                    else:
-                        st.error(f"❌ Invalid question format for Q{i+1}")
+            # Regenerate button at the top of the MCQ section
+            col1, col2 = st.columns([3, 1])
+            with col1:
+                st.markdown("### 📝 Multiple Choice Questions")
+            with col2:
+                if st.button("🔄 Regenerate", key="regenerate_mcqs", help="Generate new MCQs"):
+                    st.session_state.mcqs = None
+                    st.session_state.mcq_answers = None
+                    st.rerun()
+            
+            # Display the questions
+            for i, q in enumerate(st.session_state.mcqs):
+                if isinstance(q, dict) and 'question' in q and 'options' in q and 'answer' in q:
+                    st.markdown(f"**Q{i+1}. {q['question']}**")
+                    
+                    # Ensure mcq_answers has the right length
+                    while len(st.session_state.mcq_answers) <= i:
+                        st.session_state.mcq_answers.append(None)
+                    
+                    selected = st.radio(
+                        "Choose answer",
+                        q['options'],
+                        key=f"mcq_{i}",
+                        index=q['options'].index(st.session_state.mcq_answers[i]) if st.session_state.mcq_answers[i] in q['options'] else None
+                    )
+                    
+                    if selected != st.session_state.mcq_answers[i]:
+                        st.session_state.mcq_answers[i] = selected
+                    
+                    if selected:
+                        if selected == q['answer']:
+                            st.success(f"✅ Correct! The answer is: {q['answer']}")
+                        else:
+                            st.error(f"❌ Wrong! The correct answer is: {q['answer']}")
+                else:
+                    st.error(f"❌ Invalid question format for Q{i+1}")
         elif not st.session_state.mcqs:
             st.info("Click 'Generate MCQs' to create multiple choice questions based on your PDF.")
 
