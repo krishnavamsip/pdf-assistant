@@ -395,7 +395,7 @@ class HybridAI:
             # If combining fails, just return the summaries concatenated
             return f"## Combined Summary\n\n" + "\n\n".join(summaries)
     
-    def generate_mcqs(self, text: str, num_questions: int = 5) -> List[Dict[str, Any]]:
+    def generate_mcqs(self, text: str, num_questions: int = 5, regenerate_count: int = 0) -> List[Dict[str, Any]]:
         """Generate multiple choice questions using Perplexity"""
         import random
         
@@ -403,11 +403,11 @@ class HybridAI:
         max_chars = Config.MAX_MCQ_CHARS
         
         if len(text) > max_chars:
-            # Sample from different parts of the document
-            text = self._sample_text_for_mcqs(text, max_chars)
+            # Sample from different parts of the document with regeneration offset
+            text = self._sample_text_for_mcqs(text, max_chars, regenerate_count)
         
         # Add randomization seed to get different questions each time
-        random_seed = random.randint(1, 10000)
+        random_seed = random.randint(1, 10000) + regenerate_count * 1000
         
         prompt = f"""
         Generate {num_questions} multiple choice questions based on the following text. 
@@ -513,10 +513,13 @@ class HybridAI:
         
         return questions
     
-    def _sample_text_for_mcqs(self, text: str, max_chars: int) -> str:
+    def _sample_text_for_mcqs(self, text: str, max_chars: int, regenerate_count: int = 0) -> str:
         """Smart sampling to get content from different parts of the document"""
         import re
         import random
+        
+        # Set random seed based on regenerate count to get different samples
+        random.seed(42 + regenerate_count * 10)  # Use consistent but different seed
         
         # Split text into paragraphs
         paragraphs = [p.strip() for p in text.split('\n\n') if p.strip()]

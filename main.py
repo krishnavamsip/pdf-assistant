@@ -358,6 +358,8 @@ if st.session_state.pdf_text:
             st.session_state.mcqs = None
         if 'mcq_answers' not in st.session_state:
             st.session_state.mcq_answers = None
+        if 'mcq_regenerate_count' not in st.session_state:
+            st.session_state.mcq_regenerate_count = 0
         
         # Generate MCQs button
         if st.button("Generate MCQs", type="primary", key="generate_mcqs"):
@@ -368,12 +370,13 @@ if st.session_state.pdf_text:
                         # Show the actual sampled text that will be used for MCQs
                         from hybrid_ai import HybridAI
                         temp_ai = HybridAI()
-                        sampled_text = temp_ai._sample_text_for_mcqs(st.session_state.pdf_text, 15000)
+                        sampled_text = temp_ai._sample_text_for_mcqs(st.session_state.pdf_text, 15000, st.session_state.mcq_regenerate_count)
                         st.text_area("Sampled text for MCQs (filtered to avoid preface):", sampled_text[:2000] + "..." if len(sampled_text) > 2000 else sampled_text, height=300)
                         st.info(f"Original text length: {len(st.session_state.pdf_text)} characters")
                         st.info(f"Sampled text length: {len(sampled_text)} characters")
+                        st.info(f"Regenerate count: {st.session_state.mcq_regenerate_count}")
                     
-                    st.session_state.mcqs = ai.generate_mcqs(st.session_state.pdf_text, num_qs)
+                    st.session_state.mcqs = ai.generate_mcqs(st.session_state.pdf_text, num_qs, st.session_state.mcq_regenerate_count)
                     if st.session_state.mcqs:
                         st.session_state.mcq_answers = [None] * len(st.session_state.mcqs)
                     else:
@@ -391,6 +394,7 @@ if st.session_state.pdf_text:
                 st.markdown("### 📝 Multiple Choice Questions")
             with col2:
                 if st.button("🔄 Regenerate", key="regenerate_mcqs", help="Generate new MCQs"):
+                    st.session_state.mcq_regenerate_count += 1
                     st.session_state.mcqs = None
                     st.session_state.mcq_answers = None
                     st.rerun()
