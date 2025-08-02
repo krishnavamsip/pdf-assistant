@@ -64,7 +64,16 @@ st.sidebar.info("Developed using Streamlit and AI.")
 # --- Main Title ---
 st.title("PDF Assistant")
 st.markdown(
-    "<style>div.block-container{padding-top:2rem;} .stButton>button{background:#4F8BF9;color:white;} .stFileUploader{border:2px solid #4F8BF9;border-radius:8px;} .stRadio>div{gap:1rem;}</style>",
+    """
+    <style>
+    div.block-container{padding-top:2rem;} 
+    .stButton>button{background:#4F8BF9;color:white;border-radius:10px;padding:20px;font-size:16px;font-weight:bold;border:none;box-shadow:0 4px 6px rgba(0,0,0,0.1);transition:all 0.3s ease;}
+    .stButton>button:hover{transform:translateY(-2px);box-shadow:0 6px 12px rgba(0,0,0,0.15);}
+    .stFileUploader{border:2px solid #4F8BF9;border-radius:8px;} 
+    .stRadio>div{gap:1rem;}
+    .action-block{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);border-radius:15px;padding:20px;margin:10px 0;text-align:center;color:white;}
+    </style>
+    """,
     unsafe_allow_html=True
 )
 
@@ -217,7 +226,39 @@ if st.session_state.pdf_text:
         st.info("Go to your app settings → Secrets and add your environment variables.")
         st.stop()
     
-    option = st.selectbox("What would you like to do?", ["Summarize", "Generate MCQs", "Ask Questions (QA)"])
+    # Create three columns for the action blocks
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        if st.button("📝 Summarize", key="summarize_btn", use_container_width=True):
+            st.session_state.selected_action = "Summarize"
+            st.rerun()
+    
+    with col2:
+        if st.button("❓ Generate MCQs", key="mcq_btn", use_container_width=True):
+            st.session_state.selected_action = "Generate MCQs"
+            st.rerun()
+    
+    with col3:
+        if st.button("💬 Ask Questions", key="qa_btn", use_container_width=True):
+            st.session_state.selected_action = "Ask Questions (QA)"
+            st.rerun()
+    
+    # Initialize selected action if not set
+    if 'selected_action' not in st.session_state:
+        st.session_state.selected_action = None
+    
+    # Show selected action and change option
+    if st.session_state.selected_action:
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            st.success(f"Selected: {st.session_state.selected_action}")
+        with col2:
+            if st.button("🔄 Change", key="change_action"):
+                st.session_state.selected_action = None
+                st.rerun()
+    
+    option = st.session_state.selected_action
 
     if option == "Summarize":
         if 'summary' not in st.session_state:
