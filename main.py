@@ -363,6 +363,11 @@ if st.session_state.pdf_text:
         if st.button("Generate MCQs", type="primary", key="generate_mcqs"):
             with st.spinner("Generating MCQs..."):
                 try:
+                    # Show what text is being used (for debugging)
+                    with st.expander("🔍 Debug: Text being used for MCQs", expanded=False):
+                        sample_text = st.session_state.pdf_text[:1000] + "..." if len(st.session_state.pdf_text) > 1000 else st.session_state.pdf_text
+                        st.text_area("First 1000 characters of text:", sample_text, height=200)
+                    
                     st.session_state.mcqs = ai.generate_mcqs(st.session_state.pdf_text, num_qs)
                     if st.session_state.mcqs:
                         st.session_state.mcq_answers = [None] * len(st.session_state.mcqs)

@@ -397,21 +397,25 @@ class HybridAI:
     
     def generate_mcqs(self, text: str, num_questions: int = 5) -> List[Dict[str, Any]]:
         """Generate multiple choice questions using Perplexity"""
-        # Truncate text if too long
+        # Smart text sampling to avoid preface/front matter
         max_chars = Config.MAX_MCQ_CHARS
+        
         if len(text) > max_chars:
-            text = text[:max_chars] + "..."
+            # Sample from different parts of the document
+            text = self._sample_text_for_mcqs(text, max_chars)
         
         prompt = f"""
         Generate {num_questions} multiple choice questions based on the following text. 
         
-        IMPORTANT REQUIREMENTS:
-        1. Focus on MAIN CONTENT, KEY CONCEPTS, and IMPORTANT TOPICS from the actual chapters
-        2. AVOID questions about author, preface, acknowledgments, or publication details
-        3. Create questions that test understanding of the actual educational material
-        4. Distribute questions across different chapters/sections (beginning, middle, end)
-        5. Include questions about definitions, concepts, processes, and key facts from the content
+        CRITICAL REQUIREMENTS:
+        1. Focus EXCLUSIVELY on MAIN CONTENT, KEY CONCEPTS, and IMPORTANT TOPICS from the actual educational material
+        2. STRICTLY AVOID questions about author, preface, acknowledgments, publication details, or front matter
+        3. Create questions that test understanding of the actual subject matter and educational content
+        4. Distribute questions across different sections (beginning, middle, end) of the actual content
+        5. Include questions about definitions, concepts, processes, and key facts from the main content
         6. Make sure questions cover different difficulty levels (basic concepts to advanced topics)
+        7. If the text contains preface/acknowledgments, IGNORE those sections completely
+        8. Focus on the substantive educational content only
         
         Question Types to Include:
         - Definition questions (What is X?)
@@ -500,6 +504,61 @@ class HybridAI:
                 })
         
         return questions
+    
+    def _sample_text_for_mcqs(self, text: str, max_chars: int) -> str:
+        """Smart sampling to get content from different parts of the document"""
+        import re
+        
+        # Split text into paragraphs
+        paragraphs = [p.strip() for p in text.split('\n\n') if p.strip()]
+        
+        if len(paragraphs) <= 3:
+            # If few paragraphs, just take the middle portion
+            start_idx = len(text) // 4  # Start from 25% into the text
+            end_idx = start_idx + max_chars
+            return text[start_idx:end_idx]
+        
+        # Skip preface/acknowledgments (first few paragraphs)
+        skip_paragraphs = min(5, len(paragraphs) // 4)  # Skip first 25% of paragraphs
+        
+        # Sample from different sections
+        total_paragraphs = len(paragraphs)
+        sample_size = max_chars // 200  # Approximate chars per paragraph
+        
+        sampled_paragraphs = []
+        
+        # Sample from middle section (30-70% of document)
+        middle_start = skip_paragraphs + (total_paragraphs - skip_paragraphs) // 3
+        middle_end = skip_paragraphs + 2 * (total_paragraphs - skip_paragraphs) // 3
+        
+        # Get paragraphs from middle section
+        middle_paragraphs = paragraphs[middle_start:middle_end]
+        if middle_paragraphs:
+            # Take every 3rd paragraph to get variety
+            step = max(1, len(middle_paragraphs) // (sample_size // 2))
+            sampled_paragraphs.extend(middle_paragraphs[::step])
+        
+        # If we need more content, sample from later sections
+        if len(' '.join(sampled_paragraphs)) < max_chars // 2:
+            later_start = middle_end
+            later_paragraphs = paragraphs[later_start:]
+            if later_paragraphs:
+                step = max(1, len(later_paragraphs) // (sample_size // 2))
+                sampled_paragraphs.extend(later_paragraphs[::step])
+        
+        # Combine sampled paragraphs
+        sampled_text = '\n\n'.join(sampled_paragraphs)
+        
+        # If still too short, add some from the beginning (but skip first few paragraphs)
+        if len(sampled_text) < max_chars // 2:
+            early_paragraphs = paragraphs[skip_paragraphs:skip_paragraphs + 3]
+            sampled_text = '\n\n'.join(early_paragraphs) + '\n\n' + sampled_text
+        
+        # Truncate if still too long
+        if len(sampled_text) > max_chars:
+            sampled_text = sampled_text[:max_chars] + "..."
+        
+        return sampled_text
     
     def detect_chapters(self, text: str) -> List[Dict[str, Any]]:
         """Detect chapters in the text and return their positions"""
