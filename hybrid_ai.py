@@ -124,23 +124,35 @@ class HybridAI:
             text = text[:max_chars] + "..."
         
         prompt = f"""
-        Please provide a comprehensive, well-structured summary of the following text. 
-        Focus on the MAIN CONTENT, KEY TOPICS, and IMPORTANT CONCEPTS rather than author information or preface.
+        Please provide a comprehensive, chapter-by-chapter summary of the following text. 
         
-        Organize the summary into clear sections with headers like:
+        IMPORTANT: Skip author information, preface, acknowledgments, and focus ONLY on the actual content.
         
-        ## Main Topics Covered
-        ## Key Concepts and Definitions
-        ## Important Details and Examples
-        ## Key Takeaways
-        ## Summary
+        Structure your summary like this:
         
-        IMPORTANT: Skip author information, preface, acknowledgments, and focus on the actual educational/content material.
+        ## Chapter 1: [Chapter Title]
+        - **Main Topics**: [List the main topics covered in this chapter]
+        - **Key Concepts**: [Important concepts, definitions, or theories introduced]
+        - **Key Points**: [3-5 most important points from this chapter]
+        
+        ## Chapter 2: [Chapter Title]
+        - **Main Topics**: [List the main topics covered in this chapter]
+        - **Key Concepts**: [Important concepts, definitions, or theories introduced]
+        - **Key Points**: [3-5 most important points from this chapter]
+        
+        [Continue for all chapters...]
+        
+        ## Overall Summary
+        - **Total Chapters**: [Number of chapters covered]
+        - **Main Themes**: [Recurring themes across chapters]
+        - **Key Takeaways**: [Most important learnings from the entire book]
+        
+        If the text doesn't have clear chapters, organize by major sections or topics instead.
         
         Text to summarize:
         {text}
         
-        Please ensure the summary is detailed, accurate, and focuses on the educational content and key information from the original text.
+        Focus on the actual educational content, not metadata about the book or author.
         """
         
         if progress_callback:
@@ -169,11 +181,19 @@ class HybridAI:
         Generate {num_questions} multiple choice questions based on the following text. 
         
         IMPORTANT REQUIREMENTS:
-        1. Focus on MAIN CONTENT, KEY CONCEPTS, and IMPORTANT TOPICS
+        1. Focus on MAIN CONTENT, KEY CONCEPTS, and IMPORTANT TOPICS from the actual chapters
         2. AVOID questions about author, preface, acknowledgments, or publication details
         3. Create questions that test understanding of the actual educational material
-        4. Distribute questions across different sections of the content (beginning, middle, end)
-        5. Include questions about definitions, concepts, processes, and key facts
+        4. Distribute questions across different chapters/sections (beginning, middle, end)
+        5. Include questions about definitions, concepts, processes, and key facts from the content
+        6. Make sure questions cover different difficulty levels (basic concepts to advanced topics)
+        
+        Question Types to Include:
+        - Definition questions (What is X?)
+        - Concept understanding (How does X work?)
+        - Application questions (Which of the following is an example of X?)
+        - Comparison questions (What is the difference between X and Y?)
+        - Process questions (What are the steps in X?)
         
         For each question, provide:
         1. A clear, specific question about the content
@@ -192,7 +212,7 @@ class HybridAI:
         Text to base questions on:
         {text}
         
-        Make sure the questions test understanding of key concepts and important details from the text content, not metadata.
+        Make sure the questions test understanding of key concepts and important details from the actual educational content, not metadata.
         """
         
         try:
