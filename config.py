@@ -18,13 +18,14 @@ class Config:
         return bool(os.getenv('PERPLEXITY_API_KEY_1') or os.getenv('PERPLEXITY_API_KEY_2'))
     
     # Perplexity Model Settings
-    DEFAULT_MODEL = "sonar"
+    DEFAULT_MODEL = "auto"
     MAX_TOKENS = 4000
     TEMPERATURE = 0.7
     
     # Alternative models to try if the default fails
     FALLBACK_MODELS = [
-        # Correct Perplexity model names from documentation
+        # Let Perplexity choose the best model automatically
+        "auto",
         "sonar",
         "sonar reasoning",
         "sonar deep research"
