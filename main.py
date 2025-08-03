@@ -269,6 +269,19 @@ if uploaded_file and uploaded_file.name != st.session_state.uploaded_filename:
             # Show detailed extraction info
             st.success(f"✅ Successfully extracted {len(text):,} characters from {total_pages} pages")
             
+            # Check if PDF is very large and show warning
+            if len(text) > 1000000:  # More than 1 million characters
+                st.warning("⚠️ **Large PDF Detected!** This PDF is very large and may take a long time to process or hit rate limits.")
+                st.info("💡 **Tip:** For better results with large PDFs, consider breaking them into smaller parts using online tools like:")
+                st.markdown("""
+                - **SmallPDF Split PDF**: https://smallpdf.com/split-pdf
+                - **ILovePDF Split PDF**: https://www.ilovepdf.com/split_pdf
+                - **PDF24 Split PDF**: https://tools.pdf24.org/en/split-pdf
+                - **Adobe Acrobat Online**: https://www.adobe.com/acrobat/online/split-pdf.html
+                
+                **Recommended:** Split by chapters for best results!
+                """)
+            
             # Show text preview to verify content
             with st.expander("🔍 Text Extraction Preview", expanded=False):
                 st.text_area("First 1000 characters:", text[:1000], height=200)
@@ -309,6 +322,19 @@ if uploaded_file and uploaded_file.name != st.session_state.uploaded_filename:
             
             st.success("✅ Successfully extracted text using PyPDF2!")
             st.info(f"📊 Extracted {len(text)} characters from {total_pages} pages")
+            
+            # Check if PDF is very large and show warning
+            if len(text) > 1000000:  # More than 1 million characters
+                st.warning("⚠️ **Large PDF Detected!** This PDF is very large and may take a long time to process or hit rate limits.")
+                st.info("💡 **Tip:** For better results with large PDFs, consider breaking them into smaller parts using online tools like:")
+                st.markdown("""
+                - **SmallPDF Split PDF**: https://smallpdf.com/split-pdf
+                - **ILovePDF Split PDF**: https://www.ilovepdf.com/split_pdf
+                - **PDF24 Split PDF**: https://tools.pdf24.org/en/split-pdf
+                - **Adobe Acrobat Online**: https://www.adobe.com/acrobat/online/split-pdf.html
+                
+                **Recommended:** Split by chapters for best results!
+                """)
             
             # Show text preview to verify content
             with st.expander("🔍 Text Extraction Preview (PyPDF2)", expanded=False):
