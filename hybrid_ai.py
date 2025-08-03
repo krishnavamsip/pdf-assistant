@@ -92,9 +92,9 @@ class HybridAI:
                         "temperature": Config.TEMPERATURE
                     }
                     
-                                         response = requests.post(self.api_url, headers=headers, json=data, timeout=30)
-                     
-                     if response.status_code == 200:
+                    response = requests.post(self.api_url, headers=headers, json=data, timeout=30)
+                    
+                    if response.status_code == 200:
                          result = response.json()
                          content = result['choices'][0]['message']['content']
                          self._update_usage(key_name, success=True)
