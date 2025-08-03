@@ -822,17 +822,41 @@ class HybridAI:
         if len(context) > max_chars:
             context = context[:max_chars] + "..."
         
-        prompt = f"""
-        Based on the following context, please answer the question accurately and concisely.
-        If the answer cannot be found in the context, say "The answer cannot be found in the provided context."
+        # Check if this is a summarization request
+        summary_keywords = ['summarize', 'summary', 'overview', 'explain', 'describe', 'what is', 'tell me about']
+        is_summary_request = any(keyword in question.lower() for keyword in summary_keywords)
         
-        Context:
-        {context}
-        
-        Question: {question}
-        
-        Please provide a clear, direct answer based only on the information in the context.
-        """
+        if is_summary_request:
+            prompt = f"""
+            Based on the following context, provide a comprehensive summary of the requested topic.
+            
+            CRITICAL REQUIREMENTS:
+            1. Focus on the specific topic requested in the question
+            2. Provide a well-structured, comprehensive summary
+            3. Include key concepts, definitions, and important points
+            4. Organize information logically and clearly
+            5. Make it educational and useful for understanding the topic
+            6. If the topic is not found in the context, clearly state that
+            
+            Context:
+            {context}
+            
+            Question: {question}
+            
+            Please provide a detailed, well-structured summary of the requested topic based on the context.
+            """
+        else:
+            prompt = f"""
+            Based on the following context, please answer the question accurately and concisely.
+            If the answer cannot be found in the context, say "The answer cannot be found in the provided context."
+            
+            Context:
+            {context}
+            
+            Question: {question}
+            
+            Please provide a clear, direct answer based only on the information in the context.
+            """
         
         try:
             answer = self._make_request_with_fallback(prompt)
