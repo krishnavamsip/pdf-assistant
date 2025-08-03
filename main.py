@@ -492,54 +492,32 @@ if st.session_state.pdf_text:
         
         # Display MCQs if available
         if st.session_state.mcqs and len(st.session_state.mcqs) > 0:
-            # Header with regenerate button and better styling
-            st.markdown("""
-            <div style="background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 10px; margin-bottom: 20px;">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <h2 style="color: white; margin: 0;">📝 Multiple Choice Questions</h2>
-                    <div style="background-color: rgba(255,255,255,0.2); padding: 5px 10px; border-radius: 5px;">
-                        <span style="color: white; font-weight: bold;">{count} Questions</span>
-                    </div>
-                </div>
-            </div>
-            """.format(count=len(st.session_state.mcqs)), unsafe_allow_html=True)
-            
-            # Regenerate button in a separate row
-            col1, col2, col3 = st.columns([1, 1, 1])
+            # Header with regenerate button
+            col1, col2 = st.columns([4, 1])
+            with col1:
+                st.markdown("### 📝 Multiple Choice Questions")
             with col2:
-                if st.button("🔄 Generate New Questions", key="regenerate_mcqs", help="Generate new MCQs", type="secondary"):
+                if st.button("🔄 New Questions", key="regenerate_mcqs", help="Generate new MCQs"):
                     st.session_state.mcq_regenerate_count += 1
                     st.session_state.mcqs = None
                     st.session_state.mcq_answers = None
                     st.rerun()
             
-            # Display the questions in a cleaner format with better colors
+            # Display the questions in a cleaner format
             for i, q in enumerate(st.session_state.mcqs):
                 if isinstance(q, dict) and 'question' in q and 'options' in q and 'answer' in q:
-                    # Question container with better styling and colors
+                    # Question container with better styling
                     with st.container():
-                        # Question header with blue color
-                        st.markdown(f"""
-                        <div style="background-color: #1f77b4; padding: 10px; border-radius: 5px; margin-bottom: 10px;">
-                            <h4 style="color: white; margin: 0;">Question {i+1}</h4>
-                        </div>
-                        """, unsafe_allow_html=True)
-                        
-                        # Question text with dark blue color
-                        st.markdown(f"""
-                        <div style="background-color: #f0f8ff; padding: 15px; border-radius: 5px; border-left: 4px solid #1f77b4; margin-bottom: 15px;">
-                            <p style="color: #2c3e50; font-size: 16px; margin: 0; font-style: italic;">{q['question']}</p>
-                        </div>
-                        """, unsafe_allow_html=True)
+                        st.markdown(f"**Question {i+1}:**")
+                        st.markdown(f"*{q['question']}*")
                         
                         # Ensure mcq_answers has the right length
                         while len(st.session_state.mcq_answers) <= i:
                             st.session_state.mcq_answers.append(None)
                         
-                        # Options with better spacing and colors
-                        st.markdown("**Select your answer:**")
+                        # Options with better spacing
                         selected = st.radio(
-                            "",
+                            "Select your answer:",
                             q['options'],
                             key=f"mcq_{i}",
                             index=q['options'].index(st.session_state.mcq_answers[i]) if st.session_state.mcq_answers[i] in q['options'] else None,
@@ -549,25 +527,15 @@ if st.session_state.pdf_text:
                         if selected != st.session_state.mcq_answers[i]:
                             st.session_state.mcq_answers[i] = selected
                         
-                        # Show result with better styling and colors
+                        # Show result with better styling
                         if selected:
                             if selected == q['answer']:
-                                st.markdown("""
-                                <div style="background-color: #d4edda; padding: 10px; border-radius: 5px; border-left: 4px solid #28a745; margin-top: 10px;">
-                                    <p style="color: #155724; margin: 0; font-weight: bold;">✅ Correct! Well done!</p>
-                                </div>
-                                """, unsafe_allow_html=True)
+                                st.success("✅ **Correct!** Well done!")
                             else:
-                                st.markdown(f"""
-                                <div style="background-color: #f8d7da; padding: 10px; border-radius: 5px; border-left: 4px solid #dc3545; margin-top: 10px;">
-                                    <p style="color: #721c24; margin: 0;">❌ <strong>Incorrect.</strong> The correct answer is: <strong>{q['answer']}</strong></p>
-                                </div>
-                                """, unsafe_allow_html=True)
+                                st.error(f"❌ **Incorrect.** The correct answer is: **{q['answer']}**")
                         
-                        # Add spacing between questions with a subtle divider
-                        st.markdown("""
-                        <div style="height: 20px; background: linear-gradient(to right, transparent, #e0e0e0, transparent); margin: 20px 0;"></div>
-                        """, unsafe_allow_html=True)
+                        # Add spacing between questions
+                        st.markdown("---")
                 else:
                     st.error(f"❌ Invalid question format for Q{i+1}")
         elif not st.session_state.mcqs:
