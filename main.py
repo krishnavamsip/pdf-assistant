@@ -428,8 +428,6 @@ if st.session_state.pdf_text:
                     
                     progress.empty()
                     st.session_state.summary = summary
-                    with st.expander("📌 Summary", expanded=True):
-                        st.markdown(summary)
                 except Exception as e:
                     progress.empty()
                     st.error(f"❌ Summary generation failed: {e}")
@@ -448,13 +446,11 @@ if st.session_state.pdf_text:
                     summary = ai.get_summary(st.session_state.pdf_text, progress_callback=update_progress)
                     progress.empty()
                     st.session_state.summary = summary
-                    with st.expander("📌 Summary", expanded=True):
-                        st.markdown(summary)
                 except Exception as e:
                     progress.empty()
                     st.error(f"❌ Summary generation failed: {e}")
         
-        # Show existing summary if available
+        # Show summary if available (single expander)
         if st.session_state.summary:
             with st.expander("📌 Summary", expanded=True):
                 st.markdown(st.session_state.summary)
