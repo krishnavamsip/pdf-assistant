@@ -92,24 +92,15 @@ class HybridAI:
                         "temperature": Config.TEMPERATURE
                     }
                     
-                    print(f"Trying model: {model_to_try} with {key_name}")
-                    print(f"API Key (first 10 chars): {api_key[:10]}...")
-                    print(f"Request data: {data}")
-                    
-                    response = requests.post(self.api_url, headers=headers, json=data, timeout=30)
-                    
-                    print(f"Response status: {response.status_code}")
-                    print(f"Response headers: {dict(response.headers)}")
-                    
-                    if response.status_code == 200:
-                        result = response.json()
-                        content = result['choices'][0]['message']['content']
-                        self._update_usage(key_name, success=True)
-                        print(f"✅ Success with model: {model_to_try}")
-                        return content
-                    else:
-                        print(f"❌ Model {model_to_try} failed with status {response.status_code}")
-                        print(f"Response text: {response.text}")
+                                         response = requests.post(self.api_url, headers=headers, json=data, timeout=30)
+                     
+                     if response.status_code == 200:
+                         result = response.json()
+                         content = result['choices'][0]['message']['content']
+                         self._update_usage(key_name, success=True)
+                         return content
+                     else:
+                         print(f"❌ Model {model_to_try} failed with status {response.status_code}")
                         
                 except Exception as e:
                     print(f"Error with {key_name} and model {model_to_try}: {str(e)}")
@@ -125,7 +116,6 @@ class HybridAI:
     
     def get_summary(self, text: str, progress_callback=None) -> str:
         """Generate a comprehensive summary using Perplexity"""
-        print(f"📊 Summary generation: Text length = {len(text):,} characters")
         
         if progress_callback:
             progress_callback(0.1, "Preparing summary request...")

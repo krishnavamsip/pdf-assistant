@@ -174,7 +174,7 @@ def clear_uploaded_file():
         del st.session_state.mcq_answers
 
 # --- PDF Upload ---
-st.header("1. Upload a PDF")
+st.header("1. Upload a PDF(Not more then 150 pages)")
 uploaded_file = st.file_uploader("Choose a PDF file", type="pdf")
 
 # Only process a new file upload
@@ -266,7 +266,7 @@ if uploaded_file and uploaded_file.name != st.session_state.uploaded_filename:
             # Clean the extracted text
             text = clean_extracted_text(text)
             
-            # Show detailed extraction info
+            # Show success message
             st.success(f"✅ Successfully extracted {len(text):,} characters from {total_pages} pages")
             
             # Check if PDF is very large and show warning
@@ -281,19 +281,6 @@ if uploaded_file and uploaded_file.name != st.session_state.uploaded_filename:
                 
                 **Recommended:** Split by chapters for best results!
                 """)
-            
-            # Show text preview to verify content
-            with st.expander("🔍 Text Extraction Preview", expanded=False):
-                st.text_area("First 1000 characters:", text[:1000], height=200)
-                st.text_area("Last 1000 characters:", text[-1000:], height=200)
-                
-                # Check for chapter indicators
-                chapter_count = text.lower().count('chapter')
-                st.info(f"Found {chapter_count} instances of 'chapter' in text")
-                
-                # Show character count per page
-                avg_chars_per_page = len(text) // total_pages
-                st.info(f"Average {avg_chars_per_page:,} characters per page")
             
     except Exception as e:
         extract_progress.empty()
@@ -335,19 +322,6 @@ if uploaded_file and uploaded_file.name != st.session_state.uploaded_filename:
                 
                 **Recommended:** Split by chapters for best results!
                 """)
-            
-            # Show text preview to verify content
-            with st.expander("🔍 Text Extraction Preview (PyPDF2)", expanded=False):
-                st.text_area("First 1000 characters:", text[:1000], height=200)
-                st.text_area("Last 1000 characters:", text[-1000:], height=200)
-                
-                # Check for chapter indicators
-                chapter_count = text.lower().count('chapter')
-                st.info(f"Found {chapter_count} instances of 'chapter' in text")
-                
-                # Show character count per page
-                avg_chars_per_page = len(text) // total_pages
-                st.info(f"Average {avg_chars_per_page:,} characters per page")
             
         except Exception as e2:
             extract_progress.empty()
@@ -506,31 +480,6 @@ if st.session_state.pdf_text:
         if st.button("Generate MCQs", type="primary", key="generate_mcqs"):
             with st.spinner("Generating MCQs..."):
                 try:
-                    # Show what text is being used (for debugging)
-                    with st.expander("🔍 Debug: Text being used for MCQs", expanded=False):
-                        # Show the actual sampled text that will be used for MCQs
-                        from hybrid_ai import HybridAI
-                        temp_ai = HybridAI()
-                        sampled_text = temp_ai._sample_text_for_mcqs(st.session_state.pdf_text, 15000, st.session_state.mcq_regenerate_count)
-                        st.text_area("Sampled text for MCQs (filtered to avoid preface):", sampled_text[:2000] + "..." if len(sampled_text) > 2000 else sampled_text, height=300)
-                        st.info(f"Original text length: {len(st.session_state.pdf_text)} characters")
-                        st.info(f"Sampled text length: {len(sampled_text)} characters")
-                        st.info(f"Regenerate count: {st.session_state.mcq_regenerate_count}")
-                        
-                        # Show detected chapters
-                        try:
-                            chapters = ai.detect_chapters(st.session_state.pdf_text)
-                            if chapters:
-                                st.info(f"Detected {len(chapters)} chapters:")
-                                for ch in chapters[:5]:  # Show first 5 chapters
-                                    st.write(f"- Chapter {ch['number']}: {ch['title']}")
-                                if len(chapters) > 5:
-                                    st.write(f"- ... and {len(chapters) - 5} more chapters")
-                            else:
-                                st.warning("No chapters detected in the text")
-                        except Exception as e:
-                            st.warning(f"Could not detect chapters: {e}")
-                    
                     st.session_state.mcqs = ai.generate_mcqs(st.session_state.pdf_text, num_qs, st.session_state.mcq_regenerate_count)
                     if st.session_state.mcqs:
                         st.session_state.mcq_answers = [None] * len(st.session_state.mcqs)
@@ -543,41 +492,50 @@ if st.session_state.pdf_text:
         
         # Display MCQs if available
         if st.session_state.mcqs and len(st.session_state.mcqs) > 0:
-            # Regenerate button at the top of the MCQ section
-            col1, col2 = st.columns([3, 1])
+            # Header with regenerate button
+            col1, col2 = st.columns([4, 1])
             with col1:
                 st.markdown("### 📝 Multiple Choice Questions")
             with col2:
-                if st.button("🔄 Regenerate", key="regenerate_mcqs", help="Generate new MCQs"):
+                if st.button("🔄 New Questions", key="regenerate_mcqs", help="Generate new MCQs"):
                     st.session_state.mcq_regenerate_count += 1
                     st.session_state.mcqs = None
                     st.session_state.mcq_answers = None
                     st.rerun()
             
-            # Display the questions
+            # Display the questions in a cleaner format
             for i, q in enumerate(st.session_state.mcqs):
                 if isinstance(q, dict) and 'question' in q and 'options' in q and 'answer' in q:
-                    st.markdown(f"**Q{i+1}. {q['question']}**")
-                    
-                    # Ensure mcq_answers has the right length
-                    while len(st.session_state.mcq_answers) <= i:
-                        st.session_state.mcq_answers.append(None)
-                    
-                    selected = st.radio(
-                        "Choose answer",
-                        q['options'],
-                        key=f"mcq_{i}",
-                        index=q['options'].index(st.session_state.mcq_answers[i]) if st.session_state.mcq_answers[i] in q['options'] else None
-                    )
-                    
-                    if selected != st.session_state.mcq_answers[i]:
-                        st.session_state.mcq_answers[i] = selected
-                    
-                    if selected:
-                        if selected == q['answer']:
-                            st.success(f"✅ Correct! The answer is: {q['answer']}")
-                        else:
-                            st.error(f"❌ Wrong! The correct answer is: {q['answer']}")
+                    # Question container with better styling
+                    with st.container():
+                        st.markdown(f"**Question {i+1}:**")
+                        st.markdown(f"*{q['question']}*")
+                        
+                        # Ensure mcq_answers has the right length
+                        while len(st.session_state.mcq_answers) <= i:
+                            st.session_state.mcq_answers.append(None)
+                        
+                        # Options with better spacing
+                        selected = st.radio(
+                            "Select your answer:",
+                            q['options'],
+                            key=f"mcq_{i}",
+                            index=q['options'].index(st.session_state.mcq_answers[i]) if st.session_state.mcq_answers[i] in q['options'] else None,
+                            label_visibility="collapsed"
+                        )
+                        
+                        if selected != st.session_state.mcq_answers[i]:
+                            st.session_state.mcq_answers[i] = selected
+                        
+                        # Show result with better styling
+                        if selected:
+                            if selected == q['answer']:
+                                st.success("✅ **Correct!** Well done!")
+                            else:
+                                st.error(f"❌ **Incorrect.** The correct answer is: **{q['answer']}**")
+                        
+                        # Add spacing between questions
+                        st.markdown("---")
                 else:
                     st.error(f"❌ Invalid question format for Q{i+1}")
         elif not st.session_state.mcqs:
