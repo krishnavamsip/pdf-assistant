@@ -2,6 +2,7 @@ import streamlit as st
 import pdfplumber
 import uuid
 import os
+import re
 from dotenv import load_dotenv
 
 # Try to import config and AI modules with better error handling
@@ -22,6 +23,57 @@ try:
 except Exception as e:
     st.error(f"❌ Failed to import Supabase client: {str(e)}")
     st.stop()
+
+def clean_extracted_text(text: str) -> str:
+    """Clean extracted text from PDF artifacts and formatting issues"""
+    if not text:
+        return text
+    
+    # Remove PDF character encoding artifacts
+    text = re.sub(r'\(cid:\d+\)', '', text)
+    
+    # Remove excessive whitespace and normalize
+    text = re.sub(r'\s+', ' ', text)
+    
+    # Remove incomplete sentences (sentences ending with incomplete words)
+    text = re.sub(r'\s+[A-Za-z]{1,3}\s*$', '', text)
+    
+    # Remove lines that are just numbers or special characters
+    lines = text.split('\n')
+    cleaned_lines = []
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+        # Skip lines that are mostly numbers, dots, or special characters
+        if re.match(r'^[\d\s\.\-_]+$', line):
+            continue
+        # Skip very short lines that are likely artifacts
+        if len(line) < 3:
+            continue
+        cleaned_lines.append(line)
+    
+    # Rejoin lines
+    text = '\n'.join(cleaned_lines)
+    
+    # Remove multiple consecutive newlines
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    
+    # Clean up sentence endings
+    text = re.sub(r'\s+([.!?])\s*', r'\1 ', text)
+    
+    # Remove website URLs and email addresses
+    text = re.sub(r'https?://[^\s]+', '', text)
+    text = re.sub(r'www\.[^\s]+', '', text)
+    text = re.sub(r'\S+@\S+', '', text)
+    
+    # Remove page numbers and headers
+    text = re.sub(r'^\d+\s*$', '', text, flags=re.MULTILINE)
+    
+    # Clean up chapter headers (remove excessive dots)
+    text = re.sub(r'\.{10,}', '', text)
+    
+    return text.strip()
 
 # Initialize HybridAI with Perplexity
 ai_available = False
@@ -210,6 +262,9 @@ if uploaded_file and uploaded_file.name != st.session_state.uploaded_filename:
             text = "".join(text_parts)
             extract_progress.progress(100, text="✅ Text extraction complete!")
             st.session_state.pdf_text = text
+            
+            # Clean the extracted text
+            text = clean_extracted_text(text)
             
             # Show detailed extraction info
             st.success(f"✅ Successfully extracted {len(text):,} characters from {total_pages} pages")

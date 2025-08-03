@@ -336,24 +336,41 @@ class HybridAI:
     def _process_chunk_summary(self, text: str, chunk_num: int, total_chunks: int) -> str:
         """Process a single chunk of text"""
         prompt = f"""
-        This is chunk {chunk_num} of {total_chunks} from a larger document. 
-        Please provide a comprehensive summary of this section.
+        This is chunk {chunk_num} of {total_chunks} from a medical textbook. 
+        Please provide a comprehensive, well-structured summary of this section.
         
-        IMPORTANT: Skip author information, preface, acknowledgments, and focus ONLY on the actual content.
+        CRITICAL REQUIREMENTS:
+        1. Focus EXCLUSIVELY on the actual educational content and medical concepts
+        2. Skip any author information, preface, acknowledgments, or metadata
+        3. Organize information clearly and logically
+        4. Include important definitions, concepts, and clinical information
+        5. Make the summary educational and useful for medical students
         
         Structure your summary like this:
         
-        ## Section {chunk_num}: [Section Title or Chapter Title]
-        - **Main Topics**: [List the main topics covered in this section]
-        - **Key Concepts**: [Important concepts, definitions, or theories introduced]
-        - **Key Points**: [3-5 most important points from this section]
+        ## Chapter/Section: [Title]
         
-        If you can identify chapter titles or section headers, use them. Otherwise, describe the content clearly.
+        ### Main Topics Covered:
+        - [List the main topics and subtopics]
+        
+        ### Key Concepts:
+        - [Important definitions and concepts]
+        - [Clinical principles and guidelines]
+        
+        ### Important Points:
+        1. [Key point 1]
+        2. [Key point 2]
+        3. [Key point 3]
+        4. [Key point 4]
+        5. [Key point 5]
+        
+        ### Clinical Applications:
+        - [How this information applies in clinical practice]
         
         Text to summarize:
         {text}
         
-        Focus on the actual educational content, not metadata about the book or author.
+        Remember: This is medical educational content. Focus on making it clear, accurate, and useful for learning.
         """
         
         try:
@@ -370,30 +387,59 @@ class HybridAI:
         combined_text = "\n\n".join(summaries)
         
         prompt = f"""
-        Please combine and organize the following summaries into a comprehensive, well-structured summary.
+        Please combine and organize the following summaries into a comprehensive, well-structured medical textbook summary.
         
-        IMPORTANT: 
+        CRITICAL REQUIREMENTS:
         1. Remove any duplicate information
-        2. Organize by chapters or major sections
-        3. Create a coherent flow
-        4. Add an overall summary at the end
+        2. Organize by chapters in logical order
+        3. Create a coherent, educational flow
+        4. Focus on medical concepts and clinical applications
+        5. Make it useful for medical students and professionals
         
         Structure the final summary like this:
         
+        # Medical Textbook Summary
+        
         ## Chapter 1: [Chapter Title]
-        - **Main Topics**: [List the main topics covered in this chapter]
-        - **Key Concepts**: [Important concepts, definitions, or theories introduced]
-        - **Key Points**: [3-5 most important points from this chapter]
+        
+        ### Main Topics Covered:
+        - [List the main topics and subtopics]
+        
+        ### Key Concepts:
+        - [Important definitions and concepts]
+        - [Clinical principles and guidelines]
+        
+        ### Important Points:
+        1. [Key point 1]
+        2. [Key point 2]
+        3. [Key point 3]
+        4. [Key point 4]
+        5. [Key point 5]
+        
+        ### Clinical Applications:
+        - [How this information applies in clinical practice]
         
         [Continue for all chapters...]
         
         ## Overall Summary
-        - **Total Chapters**: [Number of chapters covered]
-        - **Main Themes**: [Recurring themes across chapters]
-        - **Key Takeaways**: [Most important learnings from the entire book]
+        
+        ### Total Chapters Covered: [Number]
+        
+        ### Main Themes:
+        - [Recurring themes across chapters]
+        
+        ### Key Takeaways:
+        1. [Most important learning 1]
+        2. [Most important learning 2]
+        3. [Most important learning 3]
+        
+        ### Clinical Relevance:
+        - [How this knowledge applies in medical practice]
         
         Summaries to combine:
         {combined_text}
+        
+        Remember: This is medical educational content. Make it clear, accurate, and clinically relevant.
         """
         
         try:
