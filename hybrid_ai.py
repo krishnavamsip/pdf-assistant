@@ -126,77 +126,114 @@ class HybridAI:
     def get_summary(self, text: str, progress_callback=None) -> str:
         """Generate a comprehensive summary using Perplexity"""
         print(f"📊 Summary generation: Text length = {len(text):,} characters")
-        print(f"📊 Summary generation: Max chars = {Config.MAX_SUMMARY_CHARS:,}")
         
-        # Split text into chunks if it's too long
-        max_chars = Config.MAX_SUMMARY_CHARS
-        if len(text) > max_chars:
-            # Split into chunks and process each
-            chunks = self._split_text_into_chunks(text, max_chars)
-            print(f"📊 Summary generation: Created {len(chunks)} initial chunks")
-            
-            # Limit to maximum 15 chunks for better coverage
-            if len(chunks) > 15:
-                # Combine chunks to reduce total number
-                combined_chunks = self._combine_chunks_to_limit(chunks, 15)
-                chunks = combined_chunks
-                print(f"📊 Summary generation: Combined into {len(chunks)} chunks")
-            
-            print(f"📊 Summary generation: Processing {len(chunks)} chunks")
-            
-            summaries = []
-            api_failures = 0
-            
-            for i, chunk in enumerate(chunks):
-                if progress_callback:
-                    progress_percent = (i + 1) / len(chunks)
-                    progress_callback(progress_percent * 0.8, f"Processing chunk {i+1}/{len(chunks)}...")
-                
-                # Add delay between requests to respect rate limits
-                if i > 0:
-                    time.sleep(Config.MIN_REQUEST_INTERVAL)
-                
-                chunk_summary = self._process_chunk_summary(chunk, i+1, len(chunks))
-                
-                # Check if API failed
-                if chunk_summary.startswith("Error processing chunk"):
-                    api_failures += 1
-                    # Use fallback summary for this chunk
-                    chunk_summary = self._create_fallback_summary(chunk, i+1, len(chunks))
-                
-                summaries.append(chunk_summary)
-            
-            # If too many API failures, use fallback for entire document
-            if api_failures > len(chunks) * 0.5:  # More than 50% failed
-                if progress_callback:
-                    progress_callback(0.9, "Using fallback summary generation...")
-                return self._create_fallback_summary(text, 1, 1)
-            
-            # Combine summaries
-            if progress_callback:
-                progress_callback(0.9, "Combining summaries...")
-            
-            combined_summary = self._combine_summaries(summaries)
-            
-            if progress_callback:
-                progress_callback(1.0, "✅ Summary complete!")
-            
-            return combined_summary
-        else:
-            # Process single chunk
-            if progress_callback:
-                progress_callback(0.5, "Processing text...")
-            
-            summary = self._process_chunk_summary(text, 1, 1)
-            
-            # If API failed, use fallback
-            if summary.startswith("Error processing chunk"):
-                summary = self._create_fallback_summary(text, 1, 1)
+        if progress_callback:
+            progress_callback(0.1, "Preparing summary request...")
+        
+        # Use a simple, effective prompt like Perplexity's own platform
+        prompt = f"""
+        Generate a comprehensive summary for the given PDF content. 
+
+        CRITICAL REQUIREMENTS:
+        1. Focus on the main content, key concepts, and important information
+        2. Skip any author information, preface, acknowledgments, or metadata
+        3. Organize information clearly and logically
+        4. Include important definitions, concepts, and key points
+        5. Make the summary educational and useful for understanding the content
+        6. If there are chapters, organize by chapters
+        7. Provide a well-structured, comprehensive summary
+
+        Structure your summary like this:
+        
+        # Document Summary
+        
+        ## Main Topics Covered:
+        - [List the main topics and subtopics]
+        
+        ## Key Concepts:
+        - [Important definitions and concepts]
+        - [Core principles and ideas]
+        
+        ## Important Points:
+        1. [Key point 1]
+        2. [Key point 2]
+        3. [Key point 3]
+        4. [Key point 4]
+        5. [Key point 5]
+        
+        ## Key Insights:
+        - [Important insights and takeaways]
+        
+        PDF Content to summarize:
+        {text}
+        
+        Remember: Focus on making the content clear, accurate, and useful for learning and understanding.
+        """
+        
+        if progress_callback:
+            progress_callback(0.5, "Generating summary with AI...")
+        
+        try:
+            summary = self._make_request_with_fallback(prompt)
             
             if progress_callback:
                 progress_callback(1.0, "✅ Summary complete!")
             
             return summary
+        except Exception as e:
+            if progress_callback:
+                progress_callback(0.9, "Using fallback summary...")
+            
+            # If API fails, use a better fallback
+            return self._create_simple_fallback_summary(text)
+    
+    def _create_simple_fallback_summary(self, text: str) -> str:
+        """Create a simple but better fallback summary"""
+        import re
+        
+        # Extract chapter titles and key information
+        lines = text.split('\n')
+        chapter_titles = []
+        key_sentences = []
+        
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+                
+            # Look for chapter titles
+            if re.match(r'^Chapter\s+\d+', line, re.IGNORECASE):
+                chapter_titles.append(line)
+            elif re.match(r'^\d+\.\s+[A-Z]', line):
+                chapter_titles.append(line)
+            
+            # Extract sentences with key terms
+            if len(line) > 20 and any(term in line.lower() for term in ['definition', 'concept', 'principle', 'method', 'approach', 'theory', 'analysis', 'diagnosis', 'treatment', 'symptoms', 'causes', 'risk', 'management']):
+                key_sentences.append(line)
+        
+        # Create a structured summary
+        summary_parts = []
+        summary_parts.append("# Document Summary")
+        
+        if chapter_titles:
+            summary_parts.append("## Main Topics Covered:")
+            for title in chapter_titles[:5]:  # Limit to 5 chapters
+                summary_parts.append(f"- {title}")
+        
+        # Add key points from important sentences
+        if key_sentences:
+            summary_parts.append("\n## Key Concepts:")
+            for i, sentence in enumerate(key_sentences[:8], 1):  # Limit to 8 key points
+                summary_parts.append(f"- {sentence}")
+        
+        # Add general content overview
+        words = text.split()
+        if len(words) > 100:
+            summary_parts.append(f"\n## Content Overview:")
+            summary_parts.append(f"This document contains approximately {len(words):,} words covering various topics.")
+            summary_parts.append("The content includes definitions, concepts, principles, and important information.")
+        
+        return "\n\n".join(summary_parts)
     
     def _split_text_into_chunks(self, text: str, max_chars: int) -> list:
         """Split text into chunks, trying to break at chapter boundaries"""
