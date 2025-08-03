@@ -198,8 +198,21 @@ if uploaded_file and uploaded_file.name != st.session_state.uploaded_filename:
             extract_progress.progress(100, text="✅ Text extraction complete!")
             st.session_state.pdf_text = text
             
-            # Show basic extraction info
+            # Show detailed extraction info
             st.success(f"✅ Successfully extracted {len(text):,} characters from {total_pages} pages")
+            
+            # Show text preview to verify content
+            with st.expander("🔍 Text Extraction Preview", expanded=False):
+                st.text_area("First 1000 characters:", text[:1000], height=200)
+                st.text_area("Last 1000 characters:", text[-1000:], height=200)
+                
+                # Check for chapter indicators
+                chapter_count = text.lower().count('chapter')
+                st.info(f"Found {chapter_count} instances of 'chapter' in text")
+                
+                # Show character count per page
+                avg_chars_per_page = len(text) // total_pages
+                st.info(f"Average {avg_chars_per_page:,} characters per page")
             
     except Exception as e:
         extract_progress.empty()
@@ -228,6 +241,19 @@ if uploaded_file and uploaded_file.name != st.session_state.uploaded_filename:
             
             st.success("✅ Successfully extracted text using PyPDF2!")
             st.info(f"📊 Extracted {len(text)} characters from {total_pages} pages")
+            
+            # Show text preview to verify content
+            with st.expander("🔍 Text Extraction Preview (PyPDF2)", expanded=False):
+                st.text_area("First 1000 characters:", text[:1000], height=200)
+                st.text_area("Last 1000 characters:", text[-1000:], height=200)
+                
+                # Check for chapter indicators
+                chapter_count = text.lower().count('chapter')
+                st.info(f"Found {chapter_count} instances of 'chapter' in text")
+                
+                # Show character count per page
+                avg_chars_per_page = len(text) // total_pages
+                st.info(f"Average {avg_chars_per_page:,} characters per page")
             
         except Exception as e2:
             extract_progress.empty()
@@ -315,6 +341,10 @@ if st.session_state.pdf_text:
                 
                 try:
                     if selected_chapter == "All Chapters (Full Book Summary)":
+                        # Show debug info before generating summary
+                        st.info(f"📊 Text length: {len(st.session_state.pdf_text):,} characters")
+                        st.info(f"📊 Text preview (first 500 chars): {st.session_state.pdf_text[:500]}...")
+                        
                         # Generate full book summary
                         summary = ai.get_summary(st.session_state.pdf_text, progress_callback=update_progress)
                     else:

@@ -125,17 +125,24 @@ class HybridAI:
     
     def get_summary(self, text: str, progress_callback=None) -> str:
         """Generate a comprehensive summary using Perplexity"""
+        print(f"📊 Summary generation: Text length = {len(text):,} characters")
+        print(f"📊 Summary generation: Max chars = {Config.MAX_SUMMARY_CHARS:,}")
+        
         # Split text into chunks if it's too long
         max_chars = Config.MAX_SUMMARY_CHARS
         if len(text) > max_chars:
             # Split into chunks and process each
             chunks = self._split_text_into_chunks(text, max_chars)
+            print(f"📊 Summary generation: Created {len(chunks)} initial chunks")
             
-            # Limit to maximum 10 chunks to avoid rate limits
-            if len(chunks) > 10:
+            # Limit to maximum 15 chunks for better coverage
+            if len(chunks) > 15:
                 # Combine chunks to reduce total number
-                combined_chunks = self._combine_chunks_to_limit(chunks, 10)
+                combined_chunks = self._combine_chunks_to_limit(chunks, 15)
                 chunks = combined_chunks
+                print(f"📊 Summary generation: Combined into {len(chunks)} chunks")
+            
+            print(f"📊 Summary generation: Processing {len(chunks)} chunks")
             
             summaries = []
             api_failures = 0
