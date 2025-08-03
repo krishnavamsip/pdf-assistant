@@ -1,14 +1,27 @@
 import streamlit as st
 import pdfplumber
 import uuid
-from hybrid_ai import HybridAI
-from supabase_client import upload_pdf_to_supabase, delete_pdf_from_supabase
-from config import Config
 import os
 from dotenv import load_dotenv
 
-# Load environment variables
-load_dotenv()
+# Try to import config and AI modules with better error handling
+try:
+    from config import Config
+except Exception as e:
+    st.error(f"❌ Failed to import config: {str(e)}")
+    st.stop()
+
+try:
+    from hybrid_ai import HybridAI
+except Exception as e:
+    st.error(f"❌ Failed to import HybridAI: {str(e)}")
+    st.stop()
+
+try:
+    from supabase_client import upload_pdf_to_supabase, delete_pdf_from_supabase
+except Exception as e:
+    st.error(f"❌ Failed to import Supabase client: {str(e)}")
+    st.stop()
 
 # Initialize HybridAI with Perplexity
 ai_available = False
