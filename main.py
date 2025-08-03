@@ -140,30 +140,51 @@ if uploaded_file and uploaded_file.name != st.session_state.uploaded_filename:
             text_parts = []
             
             for i, page in enumerate(pdf.pages):
-                # Try multiple extraction methods
-                page_text = page.extract_text() or ""
+                # Try multiple extraction methods for better coverage
+                page_text = ""
                 
-                # If no text found, try alternative extraction methods
-                if not page_text.strip():
-                    # Method 1: Try extracting tables
-                    tables = page.extract_tables()
-                    for table in tables:
-                        for row in table:
-                            page_text += " ".join([str(cell) for cell in row if cell]) + "\n"
-                
-                # Method 2: Try extracting words directly
-                if not page_text.strip():
-                    words = page.extract_words()
-                    page_text = " ".join([word['text'] for word in words])
-                
-                # Method 3: Try extracting text with different parameters
-                if not page_text.strip():
+                # Method 1: Try extracting text with layout preservation (best for textbooks)
+                try:
                     page_text = page.extract_text(layout=True) or ""
+                except:
+                    pass
                 
-                # Method 4: Try extracting text with different encoding
+                # Method 2: If no text, try standard extraction
+                if not page_text.strip():
+                    try:
+                        page_text = page.extract_text() or ""
+                    except:
+                        pass
+                
+                # Method 3: Try extracting words and reconstructing
+                if not page_text.strip():
+                    try:
+                        words = page.extract_words()
+                        page_text = " ".join([word['text'] for word in words])
+                    except:
+                        pass
+                
+                # Method 4: Try extracting tables
+                if not page_text.strip():
+                    try:
+                        tables = page.extract_tables()
+                        for table in tables:
+                            for row in table:
+                                page_text += " ".join([str(cell) for cell in row if cell]) + "\n"
+                    except:
+                        pass
+                
+                # Method 5: Try different extraction parameters
                 if not page_text.strip():
                     try:
                         page_text = page.extract_text(encoding='utf-8') or ""
+                    except:
+                        pass
+                
+                # Method 6: Try with different tolerance settings
+                if not page_text.strip():
+                    try:
+                        page_text = page.extract_text(x_tolerance=3, y_tolerance=3) or ""
                     except:
                         pass
                 
@@ -375,6 +396,20 @@ if st.session_state.pdf_text:
                         st.info(f"Original text length: {len(st.session_state.pdf_text)} characters")
                         st.info(f"Sampled text length: {len(sampled_text)} characters")
                         st.info(f"Regenerate count: {st.session_state.mcq_regenerate_count}")
+                        
+                        # Show detected chapters
+                        try:
+                            chapters = ai.detect_chapters(st.session_state.pdf_text)
+                            if chapters:
+                                st.info(f"Detected {len(chapters)} chapters:")
+                                for ch in chapters[:5]:  # Show first 5 chapters
+                                    st.write(f"- Chapter {ch['number']}: {ch['title']}")
+                                if len(chapters) > 5:
+                                    st.write(f"- ... and {len(chapters) - 5} more chapters")
+                            else:
+                                st.warning("No chapters detected in the text")
+                        except Exception as e:
+                            st.warning(f"Could not detect chapters: {e}")
                     
                     st.session_state.mcqs = ai.generate_mcqs(st.session_state.pdf_text, num_qs, st.session_state.mcq_regenerate_count)
                     if st.session_state.mcqs:

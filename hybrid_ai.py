@@ -560,25 +560,41 @@ class HybridAI:
         # Randomly sample from different sections
         sampled_paragraphs = []
         
-        # Sample from middle section (40-80% of content)
-        middle_start = len(content_paragraphs) // 5
-        middle_end = 4 * len(content_paragraphs) // 5
+        # Sample from different sections based on regenerate count
+        # This ensures we get different chapters each time
+        section_size = len(content_paragraphs) // 4  # Divide into 4 sections
         
-        middle_paragraphs = content_paragraphs[middle_start:middle_end]
-        if middle_paragraphs:
-            # Randomly select paragraphs with some spacing
-            step = max(1, len(middle_paragraphs) // 8)
-            for i in range(0, len(middle_paragraphs), step):
+        # Choose different sections based on regenerate count
+        section_choices = [
+            (section_size, 2 * section_size),      # Section 1 (25-50%)
+            (2 * section_size, 3 * section_size),  # Section 2 (50-75%)
+            (3 * section_size, len(content_paragraphs)),  # Section 3 (75-100%)
+            (0, section_size)                      # Section 4 (0-25%)
+        ]
+        
+        # Use regenerate count to cycle through sections
+        section_idx = regenerate_count % len(section_choices)
+        start_idx, end_idx = section_choices[section_idx]
+        
+        section_paragraphs = content_paragraphs[start_idx:end_idx]
+        if section_paragraphs:
+            # Randomly select paragraphs from this section
+            step = max(1, len(section_paragraphs) // 6)
+            for i in range(0, len(section_paragraphs), step):
                 if len(sampled_paragraphs) < 5:  # Limit to 5 paragraphs
-                    sampled_paragraphs.append(middle_paragraphs[i])
+                    sampled_paragraphs.append(section_paragraphs[i])
         
-        # If we need more content, sample from later sections
+        # If we need more content, sample from a different section
         if len(' '.join(sampled_paragraphs)) < max_chars // 2:
-            later_paragraphs = content_paragraphs[middle_end:]
-            if later_paragraphs:
-                # Randomly select from later paragraphs
-                random.shuffle(later_paragraphs)
-                for paragraph in later_paragraphs[:3]:  # Take up to 3 more
+            # Choose a different section for additional content
+            alt_section_idx = (regenerate_count + 1) % len(section_choices)
+            alt_start_idx, alt_end_idx = section_choices[alt_section_idx]
+            
+            alt_section_paragraphs = content_paragraphs[alt_start_idx:alt_end_idx]
+            if alt_section_paragraphs:
+                # Randomly select from alternative section
+                random.shuffle(alt_section_paragraphs)
+                for paragraph in alt_section_paragraphs[:3]:  # Take up to 3 more
                     if len(' '.join(sampled_paragraphs)) + len(paragraph) < max_chars:
                         sampled_paragraphs.append(paragraph)
         
